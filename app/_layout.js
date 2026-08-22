@@ -1,0 +1,125 @@
+import { useEffect } from "react";
+import { LogBox, StyleSheet, View } from "react-native";
+import Constants from "expo-constants";
+import { Stack, useRouter, useSegments } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+
+import { AuthProvider, useAuth } from "../lib/auth";
+import { PlayerProvider } from "../lib/player";
+import RouteLoader from "../components/RouteLoader";
+import { Loading } from "../components/ui";
+import { colors } from "../lib/theme";
+
+/**
+ * expo-audio logs these with console.error whenever it cannot bind its
+ * playback service, which puts a red box over the player on every track.
+ *
+ * Nothing is misconfigured — app.json already sets the expo-audio plugin's
+ * `enableBackgroundPlayback: true`. Expo Go is a prebuilt binary, so config
+ * plugins never reach it, and its bundled expo-audio has no background
+ * service to bind to. Lock screen controls and background playback therefore
+ * cannot work under Expo Go no matter what the config says; they work in a
+ * dev or production build, where the plugin is actually applied.
+ *
+ * Matched on the exact wording so a genuine audio failure still shows.
+ */
+LogBox.ignoreLogs([
+  "Failed to activate lock screen controls",
+  "Failed to start the expo-audio playback service",
+]);
+
+/**
+ * Starts the Google Mobile Ads SDK once, at launch.
+ *
+ * A banner will not fill until this has run, and running it per screen would
+ * repeat work the SDK only does once. Guarded the same way AdBanner is: the
+ * native module does not exist in Expo Go, and the app has to keep working
+ * there — ads are the part of the product that can be missing.
+ */
+const startAds = () => {
+  if (Constants.executionEnvironment === "storeClient") return;
+
+  try {
+    require("react-native-google-mobile-ads")
+      .default()
+      .initialize()
+      .catch(() => {});
+  } catch {
+    // No native module in this binary. Banners fall back to the placeholder.
+  }
+};
+
+/**
+ * Sends the user to the right half of the app whenever the session changes:
+ * signed out into (auth), signed in into (tabs).
+ */
+const AuthGate = ({ children }) => {
+  const { isSignedIn, restoring } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (restoring) return;
+
+    const inAuthGroup = segments[0] === "(auth)";
+
+    if (!isSignedIn && !inAuthGroup) router.replace("/(auth)/login");
+    else if (isSignedIn && inAuthGroup) router.replace("/(tabs)/home");
+  }, [isSignedIn, restoring, segments, router]);
+
+  if (restoring) return <Loading label="Starting Tantha..." />;
+
+  return children;
+};
+
+const RootLayout = () => {
+  useEffect(startAds, []);
+
+  return (
+    <SafeAreaProvider>
+      <StatusBar style="light" />
+
+      <AuthProvider>
+        <PlayerProvider>
+          <AuthGate>
+            {/*
+              A sized box for the navigator and anything laid over it. Without
+              it the overlay below has no parent with a height to fill, so it
+              collapsed to a sliver at the bottom of the screen rather than
+              covering it — absolute positioning only fills a box that has a
+              size to begin with.
+            */}
+            <View style={styles.root}>
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: colors.bg },
+                animation: "fade",
+              }}
+            >
+              <Stack.Screen name="(auth)" />
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen
+                name="player"
+                options={{ presentation: "modal", animation: "slide_from_bottom" }}
+              />
+            </Stack>
+
+              {/* Above the navigator, so it covers whichever screen arrives. */}
+              <RouteLoader />
+            </View>
+          </AuthGate>
+        </PlayerProvider>
+      </AuthProvider>
+    </SafeAreaProvider>
+  );
+};
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+});
+
+export default RootLayout;
