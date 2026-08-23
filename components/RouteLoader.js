@@ -1,33 +1,32 @@
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { Animated, Easing, StyleSheet, View } from "react-native";
 import { usePathname } from "expo-router";
 
-import { colors, radius } from "../lib/theme";
+import { colors } from "../lib/theme";
+
+/** How long the bar takes to sweep across before disappearing. */
+const SWEEP_MS = 500;
 
 /**
- * How long the spinner stays up after a route change.
+ * A thin progress bar across the top on every navigation.
  *
- * Long enough to register as a response to the tap, short enough that it is
- * never the reason you are waiting. Most screens in this app render instantly
- * — Search has nothing to fetch until you type — so a spinner tied to real
- * loading would simply never appear on those transitions, and a longer one
- * would make a fast app feel slow.
- */
-const VISIBLE_MS = 300;
-
-/**
- * A brief spinner on every navigation.
+ * It was a spinner in the middle of the screen, which meant two spinners at
+ * once on any page that loads something of its own: the route loader in the
+ * centre and the screen's own "Loading artist…" right behind it. Two
+ * different indicators for one wait reads as something being stuck.
  *
- * Screens that genuinely fetch still show their own full-screen loader with
- * its own label; this is the acknowledgement for the moment in between, so
- * moving around the app never looks like nothing happened.
+ * A bar at the top edge cannot be mistaken for a screen's own loading state.
+ * It says "your tap registered, the page is coming" and then gets out of the
+ * way, leaving each screen to speak for itself about its own content.
  *
- * Never takes touches — it sits over the screen without standing in the way
- * of it, so it can only ever cost you a glance, not a tap.
+ * Never takes touches — it sits over the top of the page without standing in
+ * front of it.
  */
 const RouteLoader = () => {
   const pathname = usePathname();
   const [visible, setVisible] = useState(false);
+
+  const progress = useRef(new Animated.Value(0)).current;
 
   // The first render is the app opening, which has its own loading screen.
   const started = useRef(false);
@@ -39,43 +38,58 @@ const RouteLoader = () => {
     }
 
     setVisible(true);
-    const timer = setTimeout(() => setVisible(false), VISIBLE_MS);
+    progress.setValue(0);
 
-    return () => clearTimeout(timer);
-  }, [pathname]);
+    const sweep = Animated.timing(progress, {
+      toValue: 1,
+      duration: SWEEP_MS,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    });
+
+    sweep.start(({ finished }) => {
+      if (finished) setVisible(false);
+    });
+
+    return () => sweep.stop();
+  }, [pathname, progress]);
 
   if (!visible) return null;
 
   return (
-    <View style={styles.overlay} pointerEvents="none">
-      <View style={styles.pill}>
-        <ActivityIndicator color={colors.accent} />
-      </View>
+    <View style={styles.track} pointerEvents="none">
+      <Animated.View
+        style={[
+          styles.bar,
+          {
+            width: progress.interpolate({
+              inputRange: [0, 1],
+              outputRange: ["0%", "100%"],
+            }),
+            opacity: progress.interpolate({
+              // Fades out as it completes, so it leaves rather than vanishes.
+              inputRange: [0, 0.8, 1],
+              outputRange: [1, 1, 0],
+            }),
+          },
+        ]}
+      />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  /**
-   * `...StyleSheet.absoluteFill`, not `absoluteFillObject` — React Native
-   * removed the latter, and spreading a name that no longer exists yields an
-   * empty object rather than an error. The overlay simply lost its
-   * positioning and collapsed to a sliver at the bottom of the screen.
-   */
-  overlay: {
+  track: {
     ...StyleSheet.absoluteFill,
-    alignItems: "center",
-    justifyContent: "center",
+    // Only the top edge; the rest of the screen is left alone.
+    bottom: undefined,
+    height: 2,
     zIndex: 200,
     elevation: 20,
   },
-  pill: {
-    width: 56,
-    height: 56,
-    borderRadius: radius.lg,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(0,0,0,0.55)",
+  bar: {
+    height: 2,
+    backgroundColor: colors.accent,
   },
 });
 

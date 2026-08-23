@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
   FlatList,
+  PanResponder,
   Pressable,
   ScrollView,
   Share,
@@ -87,29 +88,108 @@ const AmbientGlow = ({ uri }) => {
 };
 
 /**
- * Scrub bar built from a plain View rather than a slider dependency: the
- * filled width tracks position, and a tap anywhere seeks proportionally.
+ * Scrub bar, draggable.
+ *
+ * Built from Views rather than a slider dependency, but a tap-to-seek
+ * Pressable was not enough: dragging did nothing, and the two things that
+ * make a scrubber feel right are both missing from that approach.
+ *
+ * The first is that the thumb has to follow your finger continuously. The
+ * second, less obvious, is that while you are dragging it must ignore the
+ * playing position entirely — the player reports where it is several times a
+ * second, and letting that through means the thumb is fighting the finger,
+ * snapping back between updates. So a drag takes over the displayed value
+ * until it ends, and only then is a seek issued.
+ *
+ * Positions come from the gesture's screen coordinates measured against the
+ * bar's own position on screen, rather than locationX, which is not reliable
+ * across a continuous move.
  */
 const ProgressBar = ({ position, duration, onSeek }) => {
   const [width, setWidth] = useState(0);
+  const [dragAt, setDragAt] = useState(null);
 
-  const progress = duration > 0 ? Math.min(position / duration, 1) : 0;
+  const bar = useRef(null);
+
+  // Read inside gesture handlers, which capture their scope once and would
+  // otherwise keep seeing whatever these were when the responder was made.
+  const geometry = useRef({ left: 0, width: 0, duration: 0 });
+  geometry.current.width = width;
+  geometry.current.duration = duration;
+
+  const dragRef = useRef(null);
+
+  const secondsAt = (pageX) => {
+    const { left, width: w, duration: d } = geometry.current;
+
+    if (!w || !d) return 0;
+
+    const ratio = Math.max(0, Math.min((pageX - left) / w, 1));
+    return ratio * d;
+  };
+
+  const responder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+
+      // Claim the gesture so the surrounding scroll view cannot steal a drag
+      // that started on the bar.
+      onPanResponderTerminationRequest: () => false,
+
+      onPanResponderGrant: (event) => {
+        const at = secondsAt(event.nativeEvent.pageX);
+        dragRef.current = at;
+        setDragAt(at);
+      },
+
+      onPanResponderMove: (_event, gesture) => {
+        const at = secondsAt(gesture.moveX);
+        dragRef.current = at;
+        setDragAt(at);
+      },
+
+      onPanResponderRelease: () => {
+        if (dragRef.current !== null) onSeek(dragRef.current);
+        dragRef.current = null;
+        setDragAt(null);
+      },
+
+      onPanResponderTerminate: () => {
+        dragRef.current = null;
+        setDragAt(null);
+      },
+    }),
+  ).current;
+
+  const shown = dragAt ?? position;
+  const progress = duration > 0 ? Math.min(Math.max(shown / duration, 0), 1) : 0;
 
   return (
-    <Pressable
-      onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
-      onPress={(e) => {
-        if (!width || !duration) return;
-        const ratio = Math.max(0, Math.min(e.nativeEvent.locationX / width, 1));
-        onSeek(ratio * duration);
+    <View
+      ref={bar}
+      // Measured in window coordinates so a drag can be placed against it.
+      onLayout={(e) => {
+        setWidth(e.nativeEvent.layout.width);
+        bar.current?.measureInWindow?.((x) => {
+          geometry.current.left = x;
+        });
       }}
       style={styles.progressHit}
+      {...responder.panHandlers}
     >
       <View style={styles.progressTrack}>
         <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
-        <View style={[styles.progressKnob, { left: `${progress * 100}%` }]} />
+        <View
+          style={[
+            styles.progressKnob,
+            { left: `${progress * 100}%` },
+            // Grows under the finger, so it is clear what you have hold of.
+            dragAt !== null && styles.progressKnobHeld,
+          ]}
+        />
       </View>
-    </Pressable>
+    </View>
   );
 };
 
@@ -780,9 +860,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   progressHit: {
-    // Separated from the title and artist above it.
+    // Separated from the title and artist above it. The vertical padding is
+    // also the grab area — a 4pt line is far too thin to catch a thumb.
     marginTop: spacing.xl,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.lg,
   },
   progressTrack: {
     height: 4,
@@ -802,6 +883,12 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     marginLeft: -6,
     backgroundColor: colors.accent,
+  },
+  progressKnobHeld: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    marginLeft: -9,
   },
   times: {
     flexDirection: "row",

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Dimensions,
   Keyboard,
   Pressable,
   SectionList,
@@ -18,6 +19,17 @@ import { Artwork, Empty, Screen } from "../../components/ui";
 import { colors, radius, spacing, type, MINI_PLAYER_HEIGHT } from "../../lib/theme";
 import { artistService, songService } from "../../lib/services";
 import { usePlayer } from "../../lib/player";
+
+const { width: SCREEN_W } = Dimensions.get("window");
+
+/**
+ * Three artists across. Sized from the screen rather than fixed, so the row
+ * fills the width on a small phone and a large one alike.
+ */
+const GRID_COLUMNS = 3;
+const GRID_AVATAR = Math.floor(
+  (SCREEN_W - spacing.lg * 2 - spacing.md * (GRID_COLUMNS - 1)) / GRID_COLUMNS,
+);
 
 const MIN_CHARS = 2;
 const DEBOUNCE_MS = 300;
@@ -60,6 +72,44 @@ const Search = () => {
   const [searching, setSearching] = useState(false);
   const [searched, setSearched] = useState(false);
   const [recents, setRecents] = useState([]);
+
+  /**
+   * Artists to browse while the search box is empty.
+   *
+   * Verified only. The catalogue holds an account for everyone who has ever
+   * been credited on a track, including one-off features and names imported
+   * from filenames — a grid of all of them would be mostly strangers with no
+   * photo. Verification is the mark of an artist with a real presence here,
+   * which is exactly what belongs on a page for discovering people.
+   *
+   * Loaded once when the tab first opens rather than on every visit: the
+   * roster changes when someone is verified, not between taps.
+   */
+  const [browseArtists, setBrowseArtists] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    artistService
+      .all()
+      .then((list) => {
+        if (cancelled) return;
+
+        const shown = list
+          .filter((a) => a?._id && a.isVerified)
+          // Most followed first, so the names people recognise lead.
+          .sort((a, b) => (b.followersCount || 0) - (a.followersCount || 0));
+
+        setBrowseArtists(shown.slice(0, 24));
+      })
+      .catch(() => {
+        // The search box still works; there is simply nothing to browse.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const inputRef = useRef(null);
 
@@ -229,14 +279,56 @@ const Search = () => {
                     </Pressable>
                   ))}
                 </>
-              ) : (
+              ) : null}
+
+              {/*
+                Something to browse when there is nothing to show.
+
+                An empty screen with a prompt on it asks people to already
+                know what they want. Artists are the right thing to offer
+                here: in this catalogue people look for the singer far more
+                than the song title, and every artist has a face to
+                recognise. Genre would have been the obvious alternative and
+                would have been useless — nearly the whole catalogue is
+                tagged "Pop", so every tile would lead to the same place.
+              */}
+              {browseArtists.length ? (
+                <>
+                  <Text style={[styles.sectionTitle, styles.browseHead]}>
+                    Browse artists
+                  </Text>
+
+                  <View style={styles.grid}>
+                    {browseArtists.map((artist) => (
+                      <Pressable
+                        key={artist._id}
+                        onPress={() => router.push(`/artist/${artist._id}`)}
+                        style={({ pressed }) => [
+                          styles.gridItem,
+                          pressed && { opacity: 0.7 },
+                        ]}
+                      >
+                        <Artwork
+                          uri={artist.profileImage}
+                          size={GRID_AVATAR}
+                          rounded={GRID_AVATAR / 2}
+                          label={artist.stageName}
+                        />
+                        <Text numberOfLines={1} style={styles.gridName}>
+                          {artist.stageName || "Artist"}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </>
+              ) : !recents.length ? (
                 <View style={styles.hint}>
                   <Ionicons name="search" size={28} color={colors.textFaint} />
                   <Text style={styles.hintText}>
                     Find songs and artists by name.
                   </Text>
                 </View>
-              )}
+              ) : null}
             </View>
           )
         }
@@ -246,6 +338,26 @@ const Search = () => {
 };
 
 const styles = StyleSheet.create({
+  browseHead: {
+    marginTop: spacing.xl,
+    marginBottom: spacing.md,
+  },
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.md,
+  },
+  gridItem: {
+    width: GRID_AVATAR,
+    alignItems: "center",
+  },
+  gridName: {
+    marginTop: spacing.sm,
+    fontSize: 12,
+    fontWeight: "600",
+    color: colors.text,
+    textAlign: "center",
+  },
   header: {
     paddingHorizontal: spacing.lg,
     gap: spacing.lg,
