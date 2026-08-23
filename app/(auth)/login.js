@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -18,17 +17,16 @@ import { colors, radius, spacing, type } from "../../lib/theme";
 import { errorMessage, API_BASE_URL } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 
-const notReady = (provider) =>
-  Alert.alert(`${provider} sign-in`, "Not wired up yet — use email and password for now.");
 
 const Login = () => {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, signInWithGoogle } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [googleBusy, setGoogleBusy] = useState(false);
 
   const submit = async () => {
     if (!email.trim() || !password) {
@@ -46,6 +44,28 @@ const Login = () => {
       setError(errorMessage(err, "Could not sign in"));
     } finally {
       setBusy(false);
+    }
+  };
+
+
+  /**
+   * Google sign-in.
+   *
+   * Dismissing the account chooser returns nothing, and that is not an error
+   * — changing your mind should leave the screen exactly as it was, with no
+   * red text blaming you for it.
+   */
+  const handleGoogle = async () => {
+    setGoogleBusy(true);
+    setError("");
+
+    try {
+      await signInWithGoogle();
+      // The auth gate handles navigation once the session exists.
+    } catch (err) {
+      setError(errorMessage(err, "Could not sign in with Google"));
+    } finally {
+      setGoogleBusy(false);
     }
   };
 
@@ -123,8 +143,13 @@ const Login = () => {
             <Text style={styles.continueLabel}>or continue with</Text>
 
             <Pressable
-              onPress={() => notReady("Google")}
-              style={({ pressed }) => [styles.socialButton, pressed && styles.socialPressed]}
+              onPress={handleGoogle}
+              disabled={googleBusy}
+              style={({ pressed }) => [
+                styles.socialButton,
+                pressed && styles.socialPressed,
+                googleBusy && { opacity: 0.6 },
+              ]}
             >
               <Ionicons name="logo-google" size={16} color="#EA4335" />
               <Text style={styles.socialLabel}>Google</Text>

@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -18,8 +17,6 @@ import { colors, radius, spacing, type } from "../../lib/theme";
 import { errorMessage } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 
-const notReady = (provider) =>
-  Alert.alert(`${provider} sign-in`, "Not wired up yet — use email and password for now.");
 
 const Register = () => {
   const router = useRouter();
@@ -33,6 +30,7 @@ const Register = () => {
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [googleBusy, setGoogleBusy] = useState(false);
 
   const set = (key) => (value) => setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -68,6 +66,28 @@ const Register = () => {
       setError(errorMessage(err, "Could not create your account"));
     } finally {
       setBusy(false);
+    }
+  };
+
+
+  /**
+   * Google sign-in.
+   *
+   * Dismissing the account chooser returns nothing, and that is not an error
+   * — changing your mind should leave the screen exactly as it was, with no
+   * red text blaming you for it.
+   */
+  const handleGoogle = async () => {
+    setGoogleBusy(true);
+    setError("");
+
+    try {
+      await signInWithGoogle();
+      // The auth gate handles navigation once the session exists.
+    } catch (err) {
+      setError(errorMessage(err, "Could not sign in with Google"));
+    } finally {
+      setGoogleBusy(false);
     }
   };
 
@@ -157,8 +177,13 @@ const Register = () => {
             <Text style={styles.continueLabel}>or continue with</Text>
 
             <Pressable
-              onPress={() => notReady("Google")}
-              style={({ pressed }) => [styles.socialButton, pressed && styles.socialPressed]}
+              onPress={handleGoogle}
+              disabled={googleBusy}
+              style={({ pressed }) => [
+                styles.socialButton,
+                pressed && styles.socialPressed,
+                googleBusy && { opacity: 0.6 },
+              ]}
             >
               <Ionicons name="logo-google" size={16} color="#EA4335" />
               <Text style={styles.socialLabel}>Google</Text>
