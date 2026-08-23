@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import { LogBox, StyleSheet, View } from "react-native";
-import Constants from "expo-constants";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -8,6 +7,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider, useAuth } from "../lib/auth";
 import { PlayerProvider } from "../lib/player";
 import RouteLoader from "../components/RouteLoader";
+import { initAds } from "../lib/adsRuntime";
 import { Loading } from "../components/ui";
 import { colors } from "../lib/theme";
 
@@ -30,24 +30,14 @@ LogBox.ignoreLogs([
 ]);
 
 /**
- * Starts the Google Mobile Ads SDK once, at launch.
+ * Starts the Google Mobile Ads SDK as early as possible.
  *
- * A banner will not fill until this has run, and running it per screen would
- * repeat work the SDK only does once. Guarded the same way AdBanner is: the
- * native module does not exist in Expo Go, and the app has to keep working
- * there — ads are the part of the product that can be missing.
+ * The work of loading and guarding it lives in lib/adsRuntime, which every
+ * banner also waits on — so starting it here only means it begins sooner,
+ * and no longer means a banner can render before it is ready.
  */
 const startAds = () => {
-  if (Constants.executionEnvironment === "storeClient") return;
-
-  try {
-    require("react-native-google-mobile-ads")
-      .default()
-      .initialize()
-      .catch(() => {});
-  } catch {
-    // No native module in this binary. Banners fall back to the placeholder.
-  }
+  initAds();
 };
 
 /**
