@@ -20,7 +20,7 @@ import { useAuth } from "../../lib/auth";
 
 const Register = () => {
   const router = useRouter();
-  const { register, login } = useAuth();
+  const { register, login, signInWithGoogle } = useAuth();
 
   const [form, setForm] = useState({
     name: "",
