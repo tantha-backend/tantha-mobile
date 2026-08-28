@@ -9,6 +9,7 @@ import { colors, radius, spacing, type, MINI_PLAYER_HEIGHT } from "../../lib/the
 import { playlistService } from "../../lib/services";
 import { formatDuration } from "../../lib/song";
 import { usePlayer } from "../../lib/player";
+import { useAuth } from "../../lib/auth";
 import { errorMessage } from "../../lib/api";
 
 const PlaylistScreen = () => {
@@ -16,6 +17,7 @@ const PlaylistScreen = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { playSong } = usePlayer();
+  const { user } = useAuth();
 
   const [playlist, setPlaylist] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -75,6 +77,25 @@ const PlaylistScreen = () => {
 
   const songs = (playlist.songs || []).filter((s) => s && s._id);
 
+  /**
+   * Only the owner may edit a playlist, so only the owner is offered the
+   * remove button — SongRow's contract is that `onRemove` is passed by lists
+   * someone owns.
+   *
+   * Editorial playlists belong to an admin account, so every listener opening
+   * one saw a remove button that could not work. The server already refuses
+   * (removeSongFromPlaylist returns 403 to anyone but the owner), so nothing
+   * was ever deleted, but the optimistic update meant the row vanished and
+   * then sprang back with an error toast — which reads as a broken app rather
+   * than an action that was never theirs to take.
+   *
+   * `userId` comes back populated as an object, so compare the id inside it;
+   * the fallback covers any caller that returns it unpopulated.
+   */
+  const ownerId = playlist.userId?._id || playlist.userId;
+  const isOwner =
+    Boolean(user?.id) && String(ownerId || "") === String(user.id);
+
   const totalSeconds = songs.reduce((sum, s) => sum + (s.duration || 0), 0);
 
   return (
@@ -124,14 +145,16 @@ const PlaylistScreen = () => {
               song={song}
               index={i}
               onPress={() => playSong(song, songs)}
-              onRemove={() => removeFromPlaylist(song)}
+              onRemove={isOwner ? () => removeFromPlaylist(song) : undefined}
               removeLabel="Remove from this playlist"
             />
           ))
         ) : (
           <Empty
             title="This playlist is empty"
-            subtitle="Add songs to it from any track."
+            subtitle={
+              isOwner ? "Add songs to it from any track." : "Nothing here yet."
+            }
           />
         )}
       </ScrollView>
