@@ -28,7 +28,15 @@ import { errorMessage } from "../lib/api";
  * X" is useless if it vanishes with the panel that triggered it, so feedback
  * leaves through onToast.
  */
-const SongSheet = ({ song, onClose, onToast, showArtistLink = true }) => {
+const SongSheet = ({
+  song,
+  onClose,
+  // Defaults to a no-op so a screen with nowhere to put a toast can still
+  // offer the sheet, rather than crashing the first time someone likes a
+  // track from it.
+  onToast = () => {},
+  showArtistLink = true,
+}) => {
   const router = useRouter();
   const { isLiked, toggleLike } = usePlayer();
 

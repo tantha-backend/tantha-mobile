@@ -19,6 +19,7 @@ import { Artwork, Empty, Screen } from "../../components/ui";
 import { colors, radius, spacing, type, MINI_PLAYER_HEIGHT } from "../../lib/theme";
 import { artistService, songService } from "../../lib/services";
 import { usePlayer } from "../../lib/player";
+import SongSheet from "../../components/SongSheet";
 
 const { width: SCREEN_W } = Dimensions.get("window");
 
@@ -67,6 +68,7 @@ const Search = () => {
   const { playSong } = usePlayer();
 
   const [query, setQuery] = useState("");
+  const [sheetSong, setSheetSong] = useState(null);
   const [songs, setSongs] = useState([]);
   const [artists, setArtists] = useState([]);
   const [searching, setSearching] = useState(false);
@@ -191,7 +193,11 @@ const Search = () => {
           }}
         />
       ) : (
-        <SongRow song={item} onPress={() => playSong(item, songs)} />
+        <SongRow
+          song={item}
+          onPress={() => playSong(item, songs)}
+          onMore={() => setSheetSong(item)}
+        />
       ),
     [router, playSong, songs],
   );
@@ -333,6 +339,11 @@ const Search = () => {
           )
         }
       />
+      <SongSheet
+        song={sheetSong}
+        onClose={() => setSheetSong(null)}
+      />
+
     </Screen>
   );
 };

@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
-import { Artwork, PlayButton } from "./ui";
+import { Artwork } from "./ui";
 import { colors, radius, spacing } from "../lib/theme";
 import { songArtwork, songCredit } from "../lib/song";
 import { usePlayer } from "../lib/player";
@@ -10,6 +10,11 @@ import { usePlayer } from "../lib/player";
  * One track in a list. Highlights itself while it is the playing track so the
  * listener can see where they are without opening the player.
  *
+ * There is no play button on the row: pressing the row already plays the
+ * track, so a second control that did the same thing only crowded the line
+ * and left less room for the title. The trailing slot is an overflow menu
+ * instead, which is where the actions that are not "play" belong.
+ *
  * `onRemove` adds a remove button, and is given only by the lists someone owns
  * — liked songs, a playlist, listening history. Browsing lists leave it out,
  * since there is nothing there to remove from.
@@ -17,8 +22,15 @@ import { usePlayer } from "../lib/player";
  * `removeLabel` names the action for screen readers, because "remove" means
  * something different in each of those three places.
  */
-const SongRow = ({ song, onPress, index, onRemove, removeLabel = "Remove" }) => {
-  const { current, isPlaying, toggle } = usePlayer();
+const SongRow = ({
+  song,
+  onPress,
+  index,
+  onRemove,
+  removeLabel = "Remove",
+  onMore,
+}) => {
+  const { current } = usePlayer();
 
   const active = current?._id === song._id;
 
@@ -53,11 +65,20 @@ const SongRow = ({ song, onPress, index, onRemove, removeLabel = "Remove" }) => 
         </Text>
       </View>
 
-      <PlayButton
-        playing={isPlaying}
-        active={active}
-        onPress={active ? toggle : onPress}
-      />
+      {onMore ? (
+        <Pressable
+          onPress={onMore}
+          hitSlop={10}
+          style={({ pressed }) => [styles.more, pressed && { opacity: 0.6 }]}
+          accessibilityLabel={`More options for ${song.title || "this song"}`}
+        >
+          <Ionicons
+            name="ellipsis-vertical"
+            size={20}
+            color={colors.textMuted}
+          />
+        </Pressable>
+      ) : null}
 
       {onRemove ? (
         <Pressable
@@ -105,6 +126,12 @@ const styles = StyleSheet.create({
   artist: {
     fontSize: 13,
     color: colors.textMuted,
+  },
+  more: {
+    width: 30,
+    height: 30,
+    alignItems: "center",
+    justifyContent: "center",
   },
   remove: {
     width: 30,

@@ -11,6 +11,7 @@ import { formatDuration } from "../../lib/song";
 import { usePlayer } from "../../lib/player";
 import { useAuth } from "../../lib/auth";
 import { errorMessage } from "../../lib/api";
+import SongSheet from "../../components/SongSheet";
 
 const PlaylistScreen = () => {
   const { id } = useLocalSearchParams();
@@ -20,6 +21,7 @@ const PlaylistScreen = () => {
   const { user } = useAuth();
 
   const [playlist, setPlaylist] = useState(null);
+  const [sheetSong, setSheetSong] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [toast, setToast] = useState(null);
@@ -133,6 +135,7 @@ const PlaylistScreen = () => {
             <Button
               label="Play"
               onPress={() => playSong(songs[0], songs)}
+              onMore={() => setSheetSong(song)}
               style={styles.playButton}
             />
           )}
@@ -145,6 +148,7 @@ const PlaylistScreen = () => {
               song={song}
               index={i}
               onPress={() => playSong(song, songs)}
+              onMore={() => setSheetSong(song)}
               onRemove={isOwner ? () => removeFromPlaylist(song) : undefined}
               removeLabel="Remove from this playlist"
             />
@@ -165,6 +169,12 @@ const PlaylistScreen = () => {
         onHide={() => setToast(null)}
         offset={MINI_PLAYER_HEIGHT + spacing.lg}
       />
+      <SongSheet
+        song={sheetSong}
+        onClose={() => setSheetSong(null)}
+        onToast={setToast}
+      />
+
     </Screen>
   );
 };

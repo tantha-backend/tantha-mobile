@@ -25,6 +25,7 @@ import { colors, radius, spacing, type, MINI_PLAYER_HEIGHT } from "../../lib/the
 import { historyService, playlistService, songService } from "../../lib/services";
 import { usePlayer } from "../../lib/player";
 import { errorMessage } from "../../lib/api";
+import SongSheet from "../../components/SongSheet";
 
 const TABS = ["Liked", "Playlists", "History"];
 
@@ -34,6 +35,7 @@ const Library = () => {
   const { playSong } = usePlayer();
 
   const [tab, setTab] = useState("Liked");
+  const [sheetSong, setSheetSong] = useState(null);
   const [liked, setLiked] = useState([]);
   const [playlists, setPlaylists] = useState([]);
   const [history, setHistory] = useState([]);
@@ -215,6 +217,7 @@ const Library = () => {
                 key={song._id}
                 song={song}
                 onPress={() => playSong(song, liked)}
+                onMore={() => setSheetSong(song)}
                 onRemove={() => unlike(song)}
                 removeLabel="Remove from liked songs"
               />
@@ -297,6 +300,7 @@ const Library = () => {
                 key={`${song._id}-${i}`}
                 song={song}
                 onPress={() => playSong(song, historySongs)}
+                onMore={() => setSheetSong(song)}
                 onRemove={() => forget(song)}
                 removeLabel="Remove from history"
               />
@@ -315,6 +319,12 @@ const Library = () => {
         onHide={() => setToast(null)}
         offset={MINI_PLAYER_HEIGHT + spacing.lg}
       />
+      <SongSheet
+        song={sheetSong}
+        onClose={() => setSheetSong(null)}
+        onToast={setToast}
+      />
+
     </Screen>
   );
 };

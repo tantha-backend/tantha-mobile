@@ -9,6 +9,7 @@ import { colors, spacing, type, MINI_PLAYER_HEIGHT } from "../lib/theme";
 import { songService } from "../lib/services";
 import { usePlayer } from "../lib/player";
 import { errorMessage } from "../lib/api";
+import SongSheet from "../components/SongSheet";
 
 const PopularScreen = () => {
   const router = useRouter();
@@ -16,6 +17,7 @@ const PopularScreen = () => {
   const { playSong } = usePlayer();
 
   const [songs, setSongs] = useState([]);
+  const [sheetSong, setSheetSong] = useState(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -89,6 +91,7 @@ const PopularScreen = () => {
             song={item}
             index={index}
             onPress={() => playSong(item, songs)}
+            onMore={() => setSheetSong(item)}
           />
         )}
         onEndReachedThreshold={0.4}
@@ -108,6 +111,11 @@ const PopularScreen = () => {
           />
         }
       />
+      <SongSheet
+        song={sheetSong}
+        onClose={() => setSheetSong(null)}
+      />
+
     </Screen>
   );
 };

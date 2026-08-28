@@ -24,6 +24,7 @@ import { formatCount, songArtwork, songCredit } from "../../lib/song";
 import { usePlayer } from "../../lib/player";
 import { useAuth } from "../../lib/auth";
 import { errorMessage } from "../../lib/api";
+import SongSheet from "../../components/SongSheet";
 
 /**
  * A large tappable card used for the trending carousel.
@@ -84,6 +85,7 @@ const Home = () => {
   const { playSong, current } = usePlayer();
 
   const [feed, setFeed] = useState(null);
+  const [sheetSong, setSheetSong] = useState(null);
   const [recentlyPlayed, setRecentlyPlayed] = useState([]);
 
   /**
@@ -237,6 +239,7 @@ const Home = () => {
                 <SongCard
                   song={item}
                   onPress={() => playSong(item, trending)}
+                  onMore={() => setSheetSong(song)}
                 />
               )}
             />
@@ -311,6 +314,7 @@ const Home = () => {
                 <SongCard
                   song={item}
                   onPress={() => playSong(item, recent)}
+                  onMore={() => setSheetSong(song)}
                 />
               )}
             />
@@ -334,6 +338,7 @@ const Home = () => {
                 <SongCard
                   song={item}
                   onPress={() => playSong(item, popular)}
+                  onMore={() => setSheetSong(song)}
                 />
               )}
             />
@@ -348,6 +353,7 @@ const Home = () => {
                 key={song._id}
                 song={song}
                 onPress={() => playSong(song, newReleases)}
+                onMore={() => setSheetSong(song)}
               />
             ))}
           </>
@@ -366,6 +372,7 @@ const Home = () => {
                 <SongCard
                   song={item}
                   onPress={() => playSong(item, mostLiked)}
+                  onMore={() => setSheetSong(song)}
                 />
               )}
             />
@@ -404,6 +411,11 @@ const Home = () => {
           </>
         )}
       </ScrollView>
+      <SongSheet
+        song={sheetSong}
+        onClose={() => setSheetSong(null)}
+      />
+
     </Screen>
   );
 };

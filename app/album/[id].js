@@ -10,6 +10,7 @@ import { albumService } from "../../lib/services";
 import { artistName } from "../../lib/song";
 import { usePlayer } from "../../lib/player";
 import { errorMessage } from "../../lib/api";
+import SongSheet from "../../components/SongSheet";
 
 const AlbumScreen = () => {
   const { id } = useLocalSearchParams();
@@ -18,6 +19,7 @@ const AlbumScreen = () => {
   const { playSong } = usePlayer();
 
   const [album, setAlbum] = useState(null);
+  const [sheetSong, setSheetSong] = useState(null);
   const [songs, setSongs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -90,6 +92,7 @@ const AlbumScreen = () => {
             <Button
               label="Play"
               onPress={() => playSong(songs[0], songs)}
+              onMore={() => setSheetSong(song)}
               style={styles.playButton}
             />
           )}
@@ -102,12 +105,18 @@ const AlbumScreen = () => {
               song={song}
               index={i}
               onPress={() => playSong(song, songs)}
+              onMore={() => setSheetSong(song)}
             />
           ))
         ) : (
           <Empty title="No tracks" subtitle="This album has no published songs." />
         )}
       </ScrollView>
+      <SongSheet
+        song={sheetSong}
+        onClose={() => setSheetSong(null)}
+      />
+
     </Screen>
   );
 };
