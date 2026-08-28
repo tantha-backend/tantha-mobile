@@ -48,19 +48,13 @@
       "expo-secure-store",
       "@react-native-google-signin/google-signin",
       "./plugins/withUploadSigning",
-      [
-        "react-native-google-mobile-ads",
-        {
-          "androidAppId": "ca-app-pub-8201695435912533~7861602703",
-          "iosAppId": "ca-app-pub-3940256099942544~1458002511"
-        }
-      ],
+      "./plugins/withAbiSplits",
       [
         "expo-build-properties",
         {
           "android": {
-            "enableProguardInReleaseBuilds": false,
-            "enableShrinkResourcesInReleaseBuilds": false
+            "enableProguardInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true
           }
         }
       ]
