@@ -147,6 +147,7 @@ const Home = () => {
   const popular = feed?.popularSongs || [];
   const artists = feed?.trendingArtists || [];
   const billboard = feed?.billboardArtists || [];
+  const playlists = feed?.playlists || [];
 
   // Recently played can repeat the same song across plays — the shelf shows
   // each track once, most-recent first (the API already sorts by playedAt).
@@ -241,6 +242,38 @@ const Home = () => {
             />
           </>
         )}
+        {playlists.length > 0 && (
+          <>
+            <SectionHeader title="Playlists" />
+            <FlatList
+              horizontal
+              data={playlists}
+              keyExtractor={(item) => item._id}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.carousel}
+              renderItem={({ item }) => (
+                <Pressable
+                  onPress={() => router.push(`/playlist/${item._id}`)}
+                  style={({ pressed }) => [styles.card, pressed && { opacity: 0.85 }]}
+                >
+                  <Artwork
+                    uri={item.coverImage}
+                    size={148}
+                    rounded={radius.md}
+                    label={item.title}
+                  />
+                  <Text numberOfLines={1} style={styles.cardTitle}>
+                    {item.title}
+                  </Text>
+                  <Text numberOfLines={1} style={styles.cardArtist}>
+                    {(item.songs?.length ?? 0)} songs
+                  </Text>
+                </Pressable>
+              )}
+            />
+          </>
+        )}
+
 
         {billboard.length > 0 && (
           <>

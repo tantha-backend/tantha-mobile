@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Button, Screen } from "../components/ui";
@@ -37,23 +37,27 @@ const Premium = () => {
   const insets = useSafeAreaInsets();
   const { refresh } = useAuth();
 
-  /**
-   * Nothing links here while the app is free, but a deep link or a stale
-   * navigation stack still could — and this screen starts a real payment.
-   * Turn any such arrival straight back rather than take someone's money for
-   * something that is not on sale.
-   */
-  useEffect(() => {
-    if (!MONETISATION_ENABLED) router.back();
-  }, [router]);
-
-  if (!MONETISATION_ENABLED) return null;
+  // Cashfree returns the payer here via tantha://premium?order_id=…
+  const params = useLocalSearchParams();
 
   const [plan, setPlan] = useState("monthly");
   const [order, setOrder] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [checking, setChecking] = useState(false);
+
+  /**
+   * Nothing links here while the app is free, but a deep link or a stale
+   * navigation stack still could — and this screen starts a real payment.
+   * Turn any such arrival straight back rather than take someone's money
+   * for something that is not on sale.
+   *
+   * Every hook above runs unconditionally; the guard below is the only
+   * branch, so hook order stays stable.
+   */
+  useEffect(() => {
+    if (!MONETISATION_ENABLED) router.back();
+  }, [router]);
 
   const startCheckout = async () => {
     setBusy(true);
@@ -68,6 +72,50 @@ const Premium = () => {
       setBusy(false);
     }
   };
+
+  /**
+   * Returning from checkout, the order id is in the link rather than in
+   * state — the payment happened outside the app, and this screen may have
+   * been unmounted meanwhile. Verify it straight away so a payer is not
+   * asked to press a button to claim what they already bought.
+   */
+  useEffect(() => {
+    const returned = params.order_id || params.orderId;
+
+    if (!returned || !MONETISATION_ENABLED) return;
+
+    let cancelled = false;
+
+    (async () => {
+      setChecking(true);
+
+      try {
+        const res = await premiumService.verify(String(returned));
+
+        if (cancelled) return;
+
+        if (res?.success) {
+          await refresh();
+          router.replace("/(tabs)/profile");
+          return;
+        }
+
+        setOrder({ orderId: String(returned) });
+        setError(res?.message || "Payment not confirmed yet.");
+      } catch (err) {
+        if (!cancelled) {
+          setOrder({ orderId: String(returned) });
+          setError(errorMessage(err, "Could not verify the payment"));
+        }
+      } finally {
+        if (!cancelled) setChecking(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [params.order_id, params.orderId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /**
    * Confirms with the backend after the user completes payment. Separate from
@@ -95,6 +143,8 @@ const Premium = () => {
       setChecking(false);
     }
   };
+
+  if (!MONETISATION_ENABLED) return null;
 
   return (
     <Screen>

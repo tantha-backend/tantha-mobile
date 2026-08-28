@@ -224,6 +224,8 @@ const styles = StyleSheet.create({
   },
   link: {
     color: colors.accent,
+    // Same size as the muted text it sits beside, so they share a baseline.
+    fontSize: 13,
     fontWeight: "600",
   },
 });

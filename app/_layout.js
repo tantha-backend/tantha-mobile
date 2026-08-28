@@ -6,6 +6,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AuthProvider, useAuth } from "../lib/auth";
 import { PlayerProvider } from "../lib/player";
+import OfflineNotice from "../components/OfflineNotice";
 import RouteLoader from "../components/RouteLoader";
 import { initAds } from "../lib/adsRuntime";
 import { Loading } from "../components/ui";
@@ -98,6 +99,11 @@ const RootLayout = () => {
 
               {/* Above the navigator, so it covers whichever screen arrives. */}
               <RouteLoader />
+
+              {/* Outside the auth gate's screens but inside the app shell, so
+                  it is shown on the login screen too — where a dead
+                  connection is otherwise reported as a failed password. */}
+              <OfflineNotice />
             </View>
           </AuthGate>
         </PlayerProvider>

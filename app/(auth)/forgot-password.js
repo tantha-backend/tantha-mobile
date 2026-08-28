@@ -80,13 +80,19 @@ const ForgotPassword = () => {
 
               <Pressable
                 onPress={() => router.push("/(auth)/reset-password")}
-                style={({ pressed }) => [styles.submit, pressed && styles.submitPressed]}
+                style={({ pressed }) => [
+                    styles.submit,
+                    styles.submitWide,
+                    pressed && styles.submitPressed,
+                  ]}
               >
                 <Text style={styles.submitLabel}>I have a code</Text>
               </Pressable>
 
               <Pressable onPress={() => setSent(false)} hitSlop={8}>
-                <Text style={styles.link}>Use a different email</Text>
+                <Text style={[styles.link, styles.linkSpaced]}>
+                    Use a different email
+                  </Text>
               </Pressable>
             </View>
           ) : (
@@ -208,6 +214,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
     alignItems: "center",
     justifyContent: "center",
+    // The pill radius curves inward at both ends; without padding a
+    // shrink-to-fit parent lets that curve cut into the first and last letter.
+    paddingHorizontal: spacing.xl,
   },
   submitDisabled: { opacity: 0.7 },
   submitPressed: { opacity: 0.85 },
@@ -216,6 +225,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
   },
+  submitWide: {
+    alignSelf: "stretch",
+  },
+
   submitLabel: {
     fontSize: 15,
     fontWeight: "700",
@@ -229,7 +242,14 @@ const styles = StyleSheet.create({
   },
   link: {
     color: colors.accent,
+    // Matches type.muted so the two halves of "Remembered it? Sign in"
+    // share a baseline.
+    fontSize: 13,
     fontWeight: "600",
+  },
+
+  // The standalone link under the button still needs its own spacing.
+  linkSpaced: {
     marginTop: spacing.lg,
   },
   done: {

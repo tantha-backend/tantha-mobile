@@ -35,7 +35,7 @@ const MIN_PASSWORD = 8;
 const EditProfile = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { user, refresh } = useAuth();
+  const { user, refresh, signOut } = useAuth();
 
   const [name, setName] = useState(user?.name || "");
   const [photo, setPhoto] = useState(null);
@@ -47,6 +47,13 @@ const EditProfile = () => {
   const [newPassword, setNewPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [pwBusy, setPwBusy] = useState(false);
+
+  const [showDelete, setShowDelete] = useState(false);
+  const [deleteInput, setDeleteInput] = useState("");
+  const [delBusy, setDelBusy] = useState(false);
+
+  // A Google account has no password, so it confirms by typing the word.
+  const isGoogle = user?.authProvider === "google";
 
   const shownPhoto = photo?.uri || user?.profileImage || null;
   const dirty = name.trim() !== (user?.name || "") || Boolean(photo);
@@ -126,6 +133,58 @@ const EditProfile = () => {
     } finally {
       setPwBusy(false);
     }
+  };
+
+  /**
+   * Deletes the account, after asking twice.
+   *
+   * The typed confirmation and the alert are doing different jobs. Typing
+   * proves the person meant to open this section at all; the alert is the
+   * last chance to notice what is about to happen, because nothing after it
+   * can be undone — there is no grace period and no restore.
+   */
+  const removeAccount = () => {
+    if (!deleteInput.trim()) {
+      setToast({
+        text: isGoogle ? "Type DELETE to confirm" : "Enter your password",
+        tone: "error",
+      });
+      return;
+    }
+
+    Alert.alert(
+      "Delete your account?",
+      "Your playlists, listening history, likes and comments will be " +
+        "permanently deleted. This cannot be undone.",
+      [
+        { text: "Keep my account", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            setDelBusy(true);
+
+            try {
+              await authService.deleteAccount(
+                isGoogle
+                  ? { confirm: deleteInput.trim() }
+                  : { password: deleteInput },
+              );
+
+              // The account is gone, so the token in memory is worthless.
+              // Signing out is what sends them back to the login screen.
+              await signOut();
+            } catch (err) {
+              setToast({
+                text: errorMessage(err, "Could not delete your account"),
+                tone: "error",
+              });
+              setDelBusy(false);
+            }
+          },
+        },
+      ],
+    );
   };
 
   return (
@@ -259,6 +318,65 @@ const EditProfile = () => {
               </Pressable>
             </View>
           ) : null}
+
+          {/* ---- delete account ------------------------------------------ */}
+          <Pressable
+            onPress={() => setShowDelete((v) => !v)}
+            style={styles.passwordToggle}
+          >
+            <Ionicons name="trash-outline" size={18} color={colors.danger} />
+            <Text style={[styles.passwordToggleLabel, { color: colors.danger }]}>
+              Delete account
+            </Text>
+            <Ionicons
+              name={showDelete ? "chevron-up" : "chevron-down"}
+              size={18}
+              color={colors.textMuted}
+            />
+          </Pressable>
+
+          {showDelete ? (
+            <View style={styles.passwordBlock}>
+              <Text style={styles.deleteWarning}>
+                This permanently deletes your account, playlists, listening
+                history, likes and comments. It cannot be undone.
+              </Text>
+
+              {isGoogle ? (
+                <TextInput
+                  value={deleteInput}
+                  onChangeText={setDeleteInput}
+                  placeholder="Type DELETE"
+                  placeholderTextColor={colors.textMuted}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  style={styles.deleteInput}
+                />
+              ) : (
+                <PasswordField
+                  value={deleteInput}
+                  onChangeText={setDeleteInput}
+                  placeholder="Your password"
+                />
+              )}
+
+              <Pressable
+                onPress={removeAccount}
+                disabled={delBusy}
+                style={({ pressed }) => [
+                  styles.submit,
+                  styles.passwordSubmit,
+                  styles.deleteSubmit,
+                  delBusy && styles.submitDisabled,
+                  pressed && { opacity: 0.85 },
+                ]}
+              >
+                <Text style={styles.submitLabel}>
+                  {delBusy ? "Deleting..." : "Delete my account"}
+                </Text>
+              </Pressable>
+            </View>
+          ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -355,6 +473,23 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     fontSize: 12,
     color: colors.textFaint,
+  },
+  deleteWarning: {
+    marginBottom: spacing.lg,
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.textMuted,
+  },
+  deleteInput: {
+    height: 52,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceRaised,
+    color: colors.text,
+    fontSize: 15,
+  },
+  deleteSubmit: {
+    backgroundColor: colors.danger,
   },
   submit: {
     marginTop: spacing.xxl,
