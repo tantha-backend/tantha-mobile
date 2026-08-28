@@ -80,9 +80,21 @@ const RouteLoader = () => {
 
 const styles = StyleSheet.create({
   track: {
-    ...StyleSheet.absoluteFill,
-    // Only the top edge; the rest of the screen is left alone.
-    bottom: undefined,
+    /**
+     * The four edges are named directly rather than spread from
+     * `StyleSheet.absoluteFill` and then cancelled with `bottom: undefined`.
+     *
+     * That spread-then-cancel left the bar without usable positioning, so it
+     * laid out in the normal flow instead of over the page: a full-width band
+     * below the navigator that squeezed every screen into what was left, for
+     * as long as the app was starting up. Only the top edge is wanted, and
+     * saying so outright leaves nothing for a missing export or an undefined
+     * override to get wrong.
+     */
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
     height: 2,
     zIndex: 200,
     elevation: 20,
