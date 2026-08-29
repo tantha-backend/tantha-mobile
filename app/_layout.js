@@ -9,6 +9,7 @@ import { PlayerProvider } from "../lib/player";
 import OfflineNotice from "../components/OfflineNotice";
 import RouteLoader from "../components/RouteLoader";
 import MiniPlayer from "../components/MiniPlayer";
+import UpdateGate from "../components/UpdateGate";
 import { initAds } from "../lib/adsRuntime";
 import { Loading } from "../components/ui";
 import { colors, TAB_BAR_HEIGHT } from "../lib/theme";
@@ -140,6 +141,9 @@ const RootLayout = () => {
                   it is shown on the login screen too — where a dead
                   connection is otherwise reported as a failed password. */}
               <OfflineNotice />
+
+              {/* Last, so a required update covers everything above it. */}
+              <UpdateGate />
             </View>
           </AuthGate>
         </PlayerProvider>
