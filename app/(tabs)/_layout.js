@@ -3,10 +3,7 @@ import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
-import MiniPlayer from "../../components/MiniPlayer";
-import { colors, spacing } from "../../lib/theme";
-
-const TAB_BAR_HEIGHT = 62;
+import { colors, spacing, TAB_BAR_HEIGHT } from "../../lib/theme";
 
 const TabIcon = ({ name, color }) => (
   <Ionicons name={name} size={22} color={color} />
@@ -67,17 +64,6 @@ const TabsLayout = () => {
           }}
         />
       </Tabs>
-
-      {/*
-        Floated just above the tab bar rather than rendered inside it, so it
-        survives tab switches and never scrolls away with a screen.
-      */}
-      <View
-        style={[styles.miniPlayerSlot, { bottom: TAB_BAR_HEIGHT + insets.bottom }]}
-        pointerEvents="box-none"
-      >
-        <MiniPlayer />
-      </View>
     </View>
   );
 };
@@ -96,11 +82,6 @@ const styles = StyleSheet.create({
   tabLabel: {
     fontSize: 11,
     fontWeight: "600",
-  },
-  miniPlayerSlot: {
-    position: "absolute",
-    left: 0,
-    right: 0,
   },
 });
 

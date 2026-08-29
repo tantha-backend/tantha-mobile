@@ -352,11 +352,20 @@ const styles = StyleSheet.create({
   browseHead: {
     marginTop: spacing.xl,
     marginBottom: spacing.md,
+    // The gutter every other block on this screen already had; without it the
+    // heading sat hard against the screen edge.
+    paddingHorizontal: spacing.lg,
   },
   grid: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.md,
+    /**
+     * GRID_AVATAR is derived from exactly this padding, so the row only fits
+     * three across when it is applied. Missing, the tiles were sized for a
+     * narrower box than they were given and the third column ran off-screen.
+     */
+    paddingHorizontal: spacing.lg,
   },
   gridItem: {
     width: GRID_AVATAR,

@@ -2,15 +2,16 @@ import { useEffect } from "react";
 import { LogBox, StyleSheet, View } from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { SafeAreaProvider } from "react-native-safe-area-context";
+import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AuthProvider, useAuth } from "../lib/auth";
 import { PlayerProvider } from "../lib/player";
 import OfflineNotice from "../components/OfflineNotice";
 import RouteLoader from "../components/RouteLoader";
+import MiniPlayer from "../components/MiniPlayer";
 import { initAds } from "../lib/adsRuntime";
 import { Loading } from "../components/ui";
-import { colors } from "../lib/theme";
+import { colors, TAB_BAR_HEIGHT } from "../lib/theme";
 
 /**
  * expo-audio logs these with console.error whenever it cannot bind its
@@ -64,6 +65,38 @@ const AuthGate = ({ children }) => {
   return children;
 };
 
+/**
+ * The mini player, floated over whatever screen is showing.
+ *
+ * It used to live in the tabs layout, which meant it only existed on the four
+ * tab screens. Starting a song from a playlist, album or artist page played it
+ * with no visible sign at all — no bar, no controls — which reads as the tap
+ * having done nothing. Mounted here it follows the listener everywhere.
+ *
+ * It clears the tab bar on a tab screen and sits on the bottom edge elsewhere,
+ * and stays out of the way of the full player, which has its own controls.
+ */
+const MiniPlayerSlot = () => {
+  const insets = useSafeAreaInsets();
+  const segments = useSegments();
+
+  if (segments.includes("player")) return null;
+
+  const overTabs = segments[0] === "(tabs)";
+
+  return (
+    <View
+      style={[
+        styles.miniPlayerSlot,
+        { bottom: (overTabs ? TAB_BAR_HEIGHT : 0) + insets.bottom },
+      ]}
+      pointerEvents="box-none"
+    >
+      <MiniPlayer />
+    </View>
+  );
+};
+
 const RootLayout = () => {
   useEffect(startAds, []);
 
@@ -97,6 +130,9 @@ const RootLayout = () => {
               />
             </Stack>
 
+              {/* Above the navigator, so it follows every screen. */}
+              <MiniPlayerSlot />
+
               {/* Above the navigator, so it covers whichever screen arrives. */}
               <RouteLoader />
 
@@ -115,6 +151,11 @@ const RootLayout = () => {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+  },
+  miniPlayerSlot: {
+    position: "absolute",
+    left: 0,
+    right: 0,
   },
 });
 
