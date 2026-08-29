@@ -1,7 +1,7 @@
 import { Tabs } from "expo-router";
 import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 import MiniPlayer from "../../components/MiniPlayer";
 import { colors, spacing } from "../../lib/theme";

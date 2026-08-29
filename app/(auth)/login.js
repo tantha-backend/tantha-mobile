@@ -10,7 +10,7 @@ import {
   View,
 } from "react-native";
 import { Link, useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 import { PasswordField, Screen, SpinningIcon } from "../../components/ui";
 import { colors, radius, spacing, type } from "../../lib/theme";

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Image } from "expo-image";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 import { Artwork, Toast } from "./ui";
 import { colors, radius, spacing, MINI_PLAYER_HEIGHT } from "../lib/theme";
