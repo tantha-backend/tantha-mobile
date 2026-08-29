@@ -155,7 +155,14 @@ const ArtistScreen = () => {
     );
   }
 
-  const { artist, songs = [], albums = [], isFollowing, stats = {} } = data;
+  const {
+    artist,
+    songs = [],
+    albums = [],
+    collaborators = [],
+    isFollowing,
+    stats = {},
+  } = data;
 
   // `popular` is ranked by plays server-side; fall back for older responses.
   const popular =
@@ -449,6 +456,54 @@ const ArtistScreen = () => {
           </>
         ) : null}
 
+        {/* ---- appears with ------------------------------------------------ */}
+        {/*
+          Only shown when there is something real to show. These are artists
+          credited on the same tracks, not a genre guess — see collaboratorsFor
+          on the server for why this is not "similar artists".
+        */}
+        {collaborators.length > 0 ? (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Appears with</Text>
+            </View>
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.collabRow}
+            >
+              {collaborators.map((person) => (
+                <Pressable
+                  key={person._id}
+                  onPress={() => router.push(`/artist/${person._id}`)}
+                  style={({ pressed }) => [
+                    styles.collabCard,
+                    pressed && { opacity: 0.85 },
+                  ]}
+                >
+                  <Artwork
+                    uri={person.profileImage}
+                    size={96}
+                    rounded={48}
+                    label={person.stageName}
+                  />
+
+                  <Text numberOfLines={1} style={styles.collabName}>
+                    {person.stageName || person.artistName || "Artist"}
+                  </Text>
+
+                  <Text numberOfLines={1} style={styles.collabMeta}>
+                    {person.sharedSongs === 1
+                      ? "1 song together"
+                      : `${person.sharedSongs} songs together`}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </>
+        ) : null}
+
         {/*
           The same card the player shows, rather than the bare paragraph that
           used to sit here — one artist described two different ways in one
@@ -628,6 +683,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     paddingBottom: spacing.md,
+  },
+  collabRow: {
+    paddingHorizontal: spacing.lg,
+    gap: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
+  collabCard: {
+    width: 96,
+    alignItems: "center",
+    gap: spacing.xs,
+  },
+  collabName: {
+    marginTop: spacing.xs,
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.text,
+    textAlign: "center",
+  },
+  collabMeta: {
+    fontSize: 11,
+    color: colors.textFaint,
+    textAlign: "center",
   },
   sectionTitle: {
     fontSize: 24,
