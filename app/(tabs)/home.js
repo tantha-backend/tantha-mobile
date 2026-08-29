@@ -239,7 +239,6 @@ const Home = () => {
                 <SongCard
                   song={item}
                   onPress={() => playSong(item, trending)}
-                  onMore={() => setSheetSong(song)}
                 />
               )}
             />
@@ -314,7 +313,6 @@ const Home = () => {
                 <SongCard
                   song={item}
                   onPress={() => playSong(item, recent)}
-                  onMore={() => setSheetSong(song)}
                 />
               )}
             />
@@ -338,7 +336,6 @@ const Home = () => {
                 <SongCard
                   song={item}
                   onPress={() => playSong(item, popular)}
-                  onMore={() => setSheetSong(song)}
                 />
               )}
             />
@@ -372,7 +369,6 @@ const Home = () => {
                 <SongCard
                   song={item}
                   onPress={() => playSong(item, mostLiked)}
-                  onMore={() => setSheetSong(song)}
                 />
               )}
             />

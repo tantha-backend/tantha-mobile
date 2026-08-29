@@ -92,7 +92,6 @@ const AlbumScreen = () => {
             <Button
               label="Play"
               onPress={() => playSong(songs[0], songs)}
-              onMore={() => setSheetSong(song)}
               style={styles.playButton}
             />
           )}

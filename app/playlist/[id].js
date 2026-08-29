@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import SongRow from "../../components/SongRow";
@@ -26,19 +26,25 @@ const PlaylistScreen = () => {
   const [error, setError] = useState("");
   const [toast, setToast] = useState(null);
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        setPlaylist(await playlistService.byId(id));
-      } catch (err) {
-        setError(errorMessage(err, "Could not load this playlist"));
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    load();
+  const load = useCallback(async () => {
+    try {
+      setPlaylist(await playlistService.byId(id));
+    } catch (err) {
+      setError(errorMessage(err, "Could not load this playlist"));
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
+
+  /**
+   * Reloads whenever the screen comes back into view, so songs added on the
+   * Add songs screen are here on return rather than after a manual refresh.
+   */
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
 
   /**
    * Optimistic, like the library lists: the row goes at once and comes back
@@ -131,14 +137,30 @@ const PlaylistScreen = () => {
             {songs.length} songs · {formatDuration(totalSeconds)}
           </Text>
 
-          {songs.length > 0 && (
-            <Button
-              label="Play"
-              onPress={() => playSong(songs[0], songs)}
-              onMore={() => setSheetSong(song)}
-              style={styles.playButton}
-            />
-          )}
+          <View style={styles.actions}>
+            {songs.length > 0 && (
+              <Button
+                label="Play"
+                onPress={() => playSong(songs[0], songs)}
+                style={styles.playButton}
+              />
+            )}
+
+            {/* Only the owner may change what a playlist holds. */}
+            {isOwner && (
+              <Button
+                label="Add songs"
+                variant="secondary"
+                onPress={() =>
+                  router.push({
+                    pathname: "/add-songs",
+                    params: { playlistId: id, title: playlist.title || "" },
+                  })
+                }
+                style={styles.playButton}
+              />
+            )}
+          </View>
         </View>
 
         {songs.length ? (
@@ -157,7 +179,9 @@ const PlaylistScreen = () => {
           <Empty
             title="This playlist is empty"
             subtitle={
-              isOwner ? "Add songs to it from any track." : "Nothing here yet."
+              isOwner
+                ? "Use Add songs to find tracks, or add one from any song's menu."
+                : "Nothing here yet."
             }
           />
         )}
@@ -204,6 +228,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.textMuted,
     textAlign: "center",
+  },
+  actions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
   },
   playButton: {
     marginTop: spacing.lg,
