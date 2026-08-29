@@ -24,15 +24,24 @@ const { withAppBuildGradle } = require("expo/config-plugins");
  *
  * ─── Note for the Play Store ─────────────────────────────────────────────
  *
- * Play prefers an app bundle (`./gradlew bundleRelease`), which does this
- * splitting itself and per-device. These split APKs are for sideloading and
- * direct distribution.
+ * Play requires an app bundle (`./gradlew bundleRelease`), which does this
+ * splitting itself and per-device — which is why the block above turns itself
+ * off for bundle builds. These split APKs are for sideloading and direct
+ * distribution.
  */
 
 const SPLITS_CONFIG = `
     splits {
         abi {
-            enable true
+            // Off for bundleRelease. An app bundle already splits per device,
+            // and Gradle refuses to do both: "Please disable building multiple
+            // APKs when building an Android app bundle." Leaving this on broke
+            // every .aab build with a multiple-shrunk-resources error, while
+            // assembleRelease was fine — so it went unnoticed until the first
+            // Play upload was needed.
+            enable !gradle.startParameter.taskNames.any {
+                it.toLowerCase().contains("bundle")
+            }
             reset()
             // ARM covers real devices; x86_64 keeps the emulator usable.
             include "armeabi-v7a", "arm64-v8a", "x86_64"
