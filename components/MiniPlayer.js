@@ -1,11 +1,24 @@
 import { useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { Image } from "expo-image";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
 import { Artwork, Toast } from "./ui";
-import { colors, radius, spacing, MINI_PLAYER_HEIGHT } from "../lib/theme";
+import {
+  colors,
+  radius,
+  spacing,
+  MINI_PLAYER_ART,
+  MINI_PLAYER_HEIGHT,
+} from "../lib/theme";
 import { songArtwork, songCredit } from "../lib/song";
 import { usePlayer } from "../lib/player";
 
@@ -90,7 +103,7 @@ const MiniPlayer = () => {
           <View style={styles.row}>
             <Artwork
               uri={art}
-              size={44}
+              size={MINI_PLAYER_ART}
               rounded={radius.sm}
               label={current.title}
             />
@@ -157,6 +170,14 @@ const MiniPlayer = () => {
   );
 };
 
+/**
+ * The Android bar is taller (see MINI_PLAYER_HEIGHT), so its contents scale
+ * with it. Growing the card alone would just add padding around the same
+ * small artwork and text, which looks like a mistake rather than a bigger
+ * player.
+ */
+const android = Platform.OS === "android";
+
 const styles = StyleSheet.create({
   wrapper: {
     paddingHorizontal: spacing.sm,
@@ -203,17 +224,17 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   title: {
-    fontSize: 14,
+    fontSize: android ? 15 : 14,
     fontWeight: "700",
     color: colors.text,
   },
   artist: {
-    fontSize: 12,
+    fontSize: android ? 13 : 12,
     color: "rgba(255,255,255,0.75)",
   },
   control: {
-    width: 38,
-    height: 38,
+    width: android ? 44 : 38,
+    height: android ? 44 : 38,
     alignItems: "center",
     justifyContent: "center",
   },
