@@ -19,6 +19,9 @@
     },
     "android": {
       "package": "com.tanthamusic.app",
+      "permissions": [
+        "android.permission.POST_NOTIFICATIONS"
+      ],
       "blockedPermissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.SYSTEM_ALERT_WINDOW",
@@ -49,6 +52,7 @@
       "@react-native-google-signin/google-signin",
       "./plugins/withUploadSigning",
       "./plugins/withAbiSplits",
+      "./plugins/withBackgroundPlayback",
       [
         "expo-build-properties",
         {
