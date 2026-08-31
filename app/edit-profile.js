@@ -17,7 +17,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { PasswordField, Screen, SpinningIcon, Toast } from "../components/ui";
-import { colors, radius, spacing, type } from "../lib/theme";
+import { colors, radius, spacing } from "../lib/theme";
 import { errorMessage } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { authService } from "../lib/services";
