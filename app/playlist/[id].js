@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import {
   Dimensions,
   Pressable,
+  Share,
   ScrollView,
   StyleSheet,
   Text,
@@ -134,6 +135,11 @@ const PlaylistScreen = () => {
 
   const longDescription = String(playlist.description || "").length > 90;
 
+  const share = () =>
+    Share.share({
+      message: `${playlist.title || "This playlist"} on Tantha Music`,
+    }).catch(() => {});
+
   return (
     <Screen>
       <ScrollView
@@ -234,6 +240,20 @@ const PlaylistScreen = () => {
 
         <View style={styles.actions}>
           <View style={styles.actionsLeft}>
+            {/*
+              Share is here for everyone, and not only to fill the space.
+
+              On somebody else's playlist there are no owner controls, so this
+              row was a pair of buttons hard against the right edge with half a
+              screen of nothing beside them — which looks like something failed
+              to load rather than like a decision. A playlist is also the thing
+              in the app most worth passing to a friend, so the button that
+              belongs to every listener is the one that sends it.
+            */}
+            <Pressable onPress={share} hitSlop={10} accessibilityLabel="Share this playlist">
+              <Ionicons name="share-outline" size={26} color={colors.text} />
+            </Pressable>
+
             {/* Only the owner may change what a playlist holds. */}
             {isOwner ? (
               <Pressable
