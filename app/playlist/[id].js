@@ -132,6 +132,8 @@ const PlaylistScreen = () => {
   const ownerName =
     typeof playlist.userId === "object" ? playlist.userId?.name : null;
 
+  const longDescription = String(playlist.description || "").length > 90;
+
   return (
     <Screen>
       <ScrollView
@@ -171,19 +173,23 @@ const PlaylistScreen = () => {
         </View>
 
         <View style={styles.cover}>
-          <Artwork
+          <View style={styles.coverShadow}>
+            <Artwork
             uri={playlist.coverImage}
-            size={COVER_SIZE}
-            rounded={radius.md}
-            label={playlist.title}
-          />
+              size={COVER_SIZE}
+              rounded={radius.md}
+              label={playlist.title}
+            />
+          </View>
         </View>
 
         <View style={styles.meta}>
           <Text style={styles.title}>{playlist.title || "Untitled playlist"}</Text>
 
           {playlist.description ? (
-            <Pressable onPress={() => setExpanded((open) => !open)}>
+            <Pressable
+              onPress={() => longDescription && setExpanded((open) => !open)}
+            >
               <Text
                 numberOfLines={expanded ? undefined : 2}
                 style={styles.description}
@@ -191,7 +197,22 @@ const PlaylistScreen = () => {
                 {playlist.description}
               </Text>
 
-              <Text style={styles.more}>{expanded ? "see less" : "see more"}</Text>
+              {/*
+                Only offered when there is something behind it.
+
+                React Native cannot say whether a clamped Text actually
+                overflowed — with numberOfLines set, the layout it reports is
+                the clamped one — so this is measured by length instead. Two
+                lines at this size hold roughly ninety characters, and being a
+                little wrong at the boundary costs nothing. Always showing it
+                cost more: a one-line description got a "see more" that did
+                nothing when tapped, which reads as a broken control.
+              */}
+              {longDescription ? (
+                <Text style={styles.more}>
+                  {expanded ? "see less" : "see more"}
+                </Text>
+              ) : null}
             </Pressable>
           ) : null}
 
@@ -316,6 +337,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingTop: spacing.md,
     paddingBottom: spacing.xl,
+  },
+  /**
+   * Lifts the cover off the wash behind it. Without this the artwork and its
+   * own blurred copy are the same colours at the same depth, and the edges of
+   * the square disappear into it.
+   */
+  coverShadow: {
+    shadowColor: "#000000",
+    shadowOpacity: 0.55,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 16,
   },
   /**
    * Left aligned, not centred.
