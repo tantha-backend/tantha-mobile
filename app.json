@@ -19,6 +19,7 @@
     },
     "android": {
       "package": "com.tanthamusic.app",
+      "versionCode": 2,
       "permissions": [
         "android.permission.POST_NOTIFICATIONS"
       ],
