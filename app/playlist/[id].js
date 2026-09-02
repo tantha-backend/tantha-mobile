@@ -128,10 +128,19 @@ const PlaylistScreen = () => {
 
   const totalSeconds = songs.reduce((sum, s) => sum + (s.duration || 0), 0);
 
-  // Populated as an object by the API; the string fallback covers a caller
-  // that returns it unpopulated.
+  /**
+   * Who the playlist is credited to.
+   *
+   * Populated as an object by the API; an unpopulated caller gets the
+   * fallback. An admin's playlist is an editorial one and belongs to Tantha
+   * rather than to whoever was signed in when it was built — the account name
+   * behind it is "Admin User", which reads like a mistake to every listener
+   * who did not make it.
+   */
+  const owner = typeof playlist.userId === "object" ? playlist.userId : null;
+
   const ownerName =
-    typeof playlist.userId === "object" ? playlist.userId?.name : null;
+    !owner || owner.role === "admin" ? "Tantha Music" : owner.name;
 
   const longDescription = String(playlist.description || "").length > 90;
 
@@ -225,11 +234,11 @@ const PlaylistScreen = () => {
           <View style={styles.byline}>
             <View style={styles.avatar}>
               <Text style={styles.avatarLetter}>
-                {(ownerName || "T").charAt(0).toUpperCase()}
+                {ownerName.charAt(0).toUpperCase()}
               </Text>
             </View>
 
-            <Text style={styles.bylineText}>{ownerName || "Tantha Music"}</Text>
+            <Text style={styles.bylineText}>{ownerName}</Text>
           </View>
 
           <Text style={styles.counts}>
