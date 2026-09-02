@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { Animated, Easing, StyleSheet, Text, View } from "react-native";
+import {
+  Animated,
+  AppState,
+  Easing,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
@@ -22,31 +29,59 @@ const RESTORED_MS = 2200;
  * like the app is simply broken. So this stays for as long as the
  * connection is gone, and only "Back online" behaves like a toast.
  *
- * ─── Why `isInternetReachable` rather than `isConnected` ─────────────────
- *
- * Being attached to Wi-Fi is not the same as having the internet. A hotel
- * portal, a router with no upstream, a phone on the edge of coverage — all
- * report a connection while nothing gets through. Reachability is the thing
- * people mean when they say the internet is down.
- *
- * It reports undefined while first working that out, which is treated as
- * fine: better a moment's silence than accusing a healthy connection.
- *
  * ─── Why the flag is not trusted on its own ──────────────────────────────
  *
- * On some devices `isInternetReachable` reports false while the connection
- * is working perfectly — the banner then sat on screen permanently, over an
- * app that was loading and playing fine, which is worse than saying nothing.
- * So the flag only starts the question: the answer comes from actually
- * asking the API whether it is there. A captive portal still gets caught,
- * because the request fails.
+ * `isInternetReachable` reports false on plenty of healthy connections, so
+ * the flag only starts the question. The answer comes from asking the API
+ * whether it is actually there — which also catches a captive portal, since
+ * the request fails.
+ *
+ * ─── Why one failed request is not enough ────────────────────────────────
+ *
+ * It used to be, and the banner flapped: "No internet" then "Back online"
+ * then "No internet", over and over, on a phone whose connection was fine.
+ *
+ * The two signals are not independent. The flag drops during exactly the
+ * moments a request is most likely to fail anyway — the radio switching
+ * between wifi and mobile, a handover between masts, the phone waking up. So
+ * a single failure, sampled at the worst possible instant, was being treated
+ * as proof. It is not proof, it is a blip.
+ *
+ * A real outage answers the same way every time, so the banner now waits for
+ * several failures in a row. This costs nothing when the connection is
+ * genuinely down: with no network at all a request fails immediately rather
+ * than waiting for the timeout, so three of them still resolve in about a
+ * second. The delay only falls on the flaky case, which is the case that
+ * should not be shouting.
+ *
+ * ─── Why it stops when the app is not on screen ──────────────────────────
+ *
+ * Backgrounded apps get their network cut by Doze, and this one keeps
+ * running in the background now that music plays there. So it sat in a
+ * sleeping phone, failing requests that were never going to succeed, and
+ * announcing a connection problem that did not exist to a screen nobody was
+ * looking at. Whether the connection is up is only worth asking while
+ * someone is there to be told.
  */
 
-/** How long to give the check before calling it a failure. */
+/** How long to give one request before calling it a failure. */
 const PROBE_TIMEOUT_MS = 4000;
+
+/** Consecutive failures before the banner is allowed to appear. */
+const FAILURES_BEFORE_BANNER = 3;
+
+/** Gap between those attempts, so they sample different moments. */
+const RETRY_GAP_MS = 1500;
 
 /** How often to re-check while the banner is up, so it clears itself. */
 const RECHECK_MS = 8000;
+
+/**
+ * Long enough for the banner to have been read. Recovering faster than this
+ * means nobody saw the problem, and announcing the fix would be the first
+ * they hear of it — which is how a silent blip turns into two popups.
+ */
+const MIN_VISIBLE_MS = 1200;
 
 /**
  * Asks the API whether it can be reached. Any answer at all counts, including
@@ -66,9 +101,28 @@ const canReachApi = async () => {
     clearTimeout(timer);
   }
 };
+
+/** Whether the app is the thing on screen right now. */
+const useIsForeground = () => {
+  const [active, setActive] = useState(
+    () => AppState.currentState === "active",
+  );
+
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (next) =>
+      setActive(next === "active"),
+    );
+
+    return () => sub.remove();
+  }, []);
+
+  return active;
+};
+
 const OfflineNotice = () => {
   const insets = useSafeAreaInsets();
   const network = useNetworkState();
+  const foreground = useIsForeground();
 
   const [visible, setVisible] = useState(false);
   const [restored, setRestored] = useState(false);
@@ -79,13 +133,25 @@ const OfflineNotice = () => {
   // offline in the first place.
   const wasOffline = useRef(false);
 
+  // When the offline banner went up, so a blip nobody saw stays silent.
+  const shownAt = useRef(0);
+
   const offline =
     network?.isInternetReachable === false ||
     (network?.isConnected === false && network?.isInternetReachable !== true);
 
   useEffect(() => {
+    // Nobody is looking, and a sleeping phone fails requests for reasons that
+    // have nothing to do with the connection.
+    if (!foreground) return undefined;
+
     let cancelled = false;
-    let recheck;
+    let timer;
+
+    const wait = (ms) =>
+      new Promise((resolve) => {
+        timer = setTimeout(resolve, ms);
+      });
 
     const goOnline = () => {
       if (!wasOffline.current) {
@@ -94,40 +160,61 @@ const OfflineNotice = () => {
       }
 
       wasOffline.current = false;
+
+      // Recovered before anyone could read it, so say nothing.
+      if (Date.now() - shownAt.current < MIN_VISIBLE_MS) {
+        setVisible(false);
+        return;
+      }
+
       setRestored(true);
       setVisible(true);
     };
 
-    const check = async () => {
+    const run = async () => {
       // The flag says fine, so it is fine — no need to spend a request.
       if (!offline) {
         goOnline();
         return;
       }
 
-      // The flag says offline. Confirm it before accusing the connection.
-      const reachable = await canReachApi();
-      if (cancelled) return;
+      // The flag says offline. Ask several times before believing it.
+      for (let attempt = 0; attempt < FAILURES_BEFORE_BANNER; attempt += 1) {
+        const reachable = await canReachApi();
+        if (cancelled) return;
 
-      if (reachable) {
-        goOnline();
-        return;
+        if (reachable) {
+          goOnline();
+          return;
+        }
+
+        if (attempt < FAILURES_BEFORE_BANNER - 1) {
+          await wait(RETRY_GAP_MS);
+          if (cancelled) return;
+        }
       }
+
+      if (!wasOffline.current) shownAt.current = Date.now();
 
       wasOffline.current = true;
       setRestored(false);
       setVisible(true);
 
-      recheck = setTimeout(check, RECHECK_MS);
+      // Keep asking so the banner clears itself when the connection returns,
+      // even if the flag never changes.
+      await wait(RECHECK_MS);
+      if (cancelled) return;
+
+      run();
     };
 
-    check();
+    run();
 
     return () => {
       cancelled = true;
-      clearTimeout(recheck);
+      clearTimeout(timer);
     };
-  }, [offline]);
+  }, [offline, foreground]);
 
   // "Back online" is a toast; the offline state is not.
   useEffect(() => {
