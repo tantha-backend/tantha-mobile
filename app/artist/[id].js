@@ -300,17 +300,19 @@ const ArtistScreen = () => {
           </View>
 
           <View style={styles.heroText}>
-            <View style={styles.nameRow}>
-              <Text numberOfLines={2} style={styles.name}>
-                {artist.stageName || "Artist"}
-              </Text>
-
-              {artist.isVerified ? (
+            {artist.isVerified ? (
+              <View style={styles.verifiedRow}>
                 <View style={styles.verified}>
-                  <Ionicons name="checkmark" size={15} color="#ffffff" />
+                  <Ionicons name="checkmark" size={11} color="#ffffff" />
                 </View>
-              ) : null}
-            </View>
+
+                <Text style={styles.verifiedLabel}>Verified artist</Text>
+              </View>
+            ) : null}
+
+            <Text numberOfLines={2} style={styles.name}>
+              {artist.stageName || "Artist"}
+            </Text>
 
             <Text style={styles.audience}>{audience}</Text>
           </View>
@@ -603,10 +605,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
   },
-  nameRow: {
+  /**
+   * The tick sits above the name rather than beside it.
+   *
+   * Beside it, it drifted to the far edge of the screen. A name long enough to
+   * wrap fills the whole width — the text box is as wide as the space it was
+   * given, whatever the second line happens to contain — so a badge placed
+   * after it lands against the right margin, floating in the middle of the
+   * two lines and attached to nothing.
+   *
+   * Above it, the badge is always next to the name whether the name takes one
+   * line or two, and saying what the tick means is worth more than the tick
+   * alone was.
+   */
+  verifiedRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.md,
+    gap: spacing.xs + 2,
+    marginBottom: spacing.xs,
+  },
+  verifiedLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+    color: colors.text,
   },
   name: {
     flexShrink: 1,
@@ -617,8 +639,8 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   verified: {
-    width: 24,
-    height: 24,
+    width: 18,
+    height: 18,
     borderRadius: radius.pill,
     backgroundColor: colors.accent,
     alignItems: "center",

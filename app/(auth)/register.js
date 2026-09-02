@@ -217,7 +217,7 @@ const Register = () => {
                     size={16}
                     color={colors.text}
                   />
-                  <Text style={styles.socialLabel}>Signing in...</Text>
+                  <Text style={styles.socialLabel}>Signing up...</Text>
                 </>
               ) : (
                 <>
