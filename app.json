@@ -49,6 +49,14 @@
       ],
       "expo-image",
       "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Tantha Music needs access to your photos so you can choose a profile picture.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
       "@react-native-google-signin/google-signin",
       "./plugins/withUploadSigning",
       "./plugins/withAbiSplits",
