@@ -64,7 +64,14 @@ const Register = () => {
       if (!user) await login(form.email.trim(), form.password);
     } catch (err) {
       setError(errorMessage(err, "Could not create your account"));
-    } finally {
+
+      /**
+       * Cleared here rather than in a finally, because success does not end
+       * here — the auth gate replaces this screen once the session exists.
+       * Clearing it on the way out put the idle button back on screen for the
+       * moment in between, which reads as the tap having done nothing and
+       * invites a second one.
+       */
       setBusy(false);
     }
   };
@@ -82,11 +89,29 @@ const Register = () => {
     setError("");
 
     try {
-      await signInWithGoogle();
-      // The auth gate handles navigation once the session exists.
+      const user = await signInWithGoogle();
+
+      /**
+       * The auth gate replaces this screen once the session exists, so the
+       * spinner is left running on success.
+       *
+       * Dismissing the account chooser is the exception: it returns nothing
+       * rather than throwing, because changing your mind is not an error. But
+       * nothing is going to replace this screen either, so the button has to
+       * put itself back — otherwise it spins for ever over a screen that has
+       * finished doing anything.
+       */
+      if (!user) setGoogleBusy(false);
     } catch (err) {
       setError(errorMessage(err, "Could not sign in with Google"));
-    } finally {
+
+      /**
+       * Cleared here rather than in a finally, because success does not end
+       * here — the auth gate replaces this screen once the session exists.
+       * Clearing it on the way out put the idle button back on screen for the
+       * moment in between, which reads as the tap having done nothing and
+       * invites a second one.
+       */
       setGoogleBusy(false);
     }
   };
@@ -185,8 +210,21 @@ const Register = () => {
                 googleBusy && { opacity: 0.6 },
               ]}
             >
-              <Ionicons name="logo-google" size={16} color="#EA4335" />
-              <Text style={styles.socialLabel}>Google</Text>
+              {googleBusy ? (
+                <>
+                  <SpinningIcon
+                    name="musical-notes"
+                    size={16}
+                    color={colors.text}
+                  />
+                  <Text style={styles.socialLabel}>Signing in...</Text>
+                </>
+              ) : (
+                <>
+                  <Ionicons name="logo-google" size={16} color="#EA4335" />
+                  <Text style={styles.socialLabel}>Google</Text>
+                </>
+              )}
             </Pressable>
 
             <View style={styles.footer}>
