@@ -288,9 +288,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  /**
+   * Green, not the brand pink.
+   *
+   * The two banners say opposite things and were telling them apart by their
+   * words alone — the same accent that marks everything else in the app is no
+   * signal at all. Green is the one colour that reads as "fixed" before the
+   * sentence has been read, which is the whole job of a message that is gone
+   * again in two seconds.
+   */
   pillOnline: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
+    backgroundColor: colors.success,
+    borderColor: colors.success,
   },
   label: {
     fontSize: 13,
