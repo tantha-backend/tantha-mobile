@@ -13,6 +13,9 @@
     },
     "preview": {
       "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://tantha-music-backend-production-2816.up.railway.app/api"
+      },
       "android": {
         "buildType": "apk"
       },
@@ -22,6 +25,9 @@
     },
     "production": {
       "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://tantha-music-backend-production-2816.up.railway.app/api"
+      },
       "android": {
         "buildType": "app-bundle"
       }
