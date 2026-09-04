@@ -21,7 +21,10 @@
       "package": "com.tanthamusic.app",
       "versionCode": 2,
       "permissions": [
-        "android.permission.POST_NOTIFICATIONS"
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
       ],
       "blockedPermissions": [
         "android.permission.RECORD_AUDIO",
@@ -58,7 +61,12 @@
           "microphonePermission": false
         }
       ],
-      "@react-native-google-signin/google-signin",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.1075084736343-7titu5rl5qq86s1l45likuhhl5h50ead"
+        }
+      ],
       "./plugins/withUploadSigning",
       "./plugins/withAbiSplits",
       "./plugins/withBackgroundPlayback",
@@ -67,13 +75,21 @@
         {
           "android": {
             "enableProguardInReleaseBuilds": true,
-            "enableShrinkResourcesInReleaseBuilds": true
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "enableMinifyInReleaseBuilds": true
           }
         }
       ]
     ],
     "experiments": {
       "typedRoutes": false
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "9b5b094d-39bb-4066-8851-a16f69fb1f19"
+      }
+    },
+    "owner": "tanthaentertainment"
   }
 }
