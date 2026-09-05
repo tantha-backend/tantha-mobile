@@ -52,8 +52,10 @@ const EditProfile = () => {
   const [deleteInput, setDeleteInput] = useState("");
   const [delBusy, setDelBusy] = useState(false);
 
-  // A Google account has no password, so it confirms by typing the word.
-  const isGoogle = user?.authProvider === "google";
+  // Google and Apple accounts have no password, so they confirm by typing
+  // the word instead. Anything that is not our own email login is one of
+  // those, which stays true as more ways in are added.
+  const isPasswordless = user?.authProvider !== "local";
 
   const shownPhoto = photo?.uri || user?.profileImage || null;
   const dirty = name.trim() !== (user?.name || "") || Boolean(photo);
@@ -159,7 +161,7 @@ const EditProfile = () => {
   const removeAccount = () => {
     if (!deleteInput.trim()) {
       setToast({
-        text: isGoogle ? "Type DELETE to confirm" : "Enter your password",
+        text: isPasswordless ? "Type DELETE to confirm" : "Enter your password",
         tone: "error",
       });
       return;
@@ -179,7 +181,7 @@ const EditProfile = () => {
 
             try {
               await authService.deleteAccount(
-                isGoogle
+                isPasswordless
                   ? { confirm: deleteInput.trim() }
                   : { password: deleteInput },
               );
@@ -365,7 +367,7 @@ const EditProfile = () => {
                 history, likes and comments. It cannot be undone.
               </Text>
 
-              {isGoogle ? (
+              {isPasswordless ? (
                 <TextInput
                   value={deleteInput}
                   onChangeText={setDeleteInput}
