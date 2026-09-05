@@ -13,10 +13,10 @@ import { Link, useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
 import { PasswordField, Screen, SpinningIcon } from "../../components/ui";
+import AppleSignInButton from "../../components/AppleSignInButton";
 import { colors, radius, spacing, type } from "../../lib/theme";
 import { errorMessage } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
-
 
 const Register = () => {
   const router = useRouter();
@@ -32,7 +32,8 @@ const Register = () => {
   const [error, setError] = useState("");
   const [googleBusy, setGoogleBusy] = useState(false);
 
-  const set = (key) => (value) => setForm((prev) => ({ ...prev, [key]: value }));
+  const set = (key) => (value) =>
+    setForm((prev) => ({ ...prev, [key]: value }));
 
   const submit = async () => {
     if (!form.name.trim() || !form.email.trim() || !form.password) {
@@ -75,7 +76,6 @@ const Register = () => {
       setBusy(false);
     }
   };
-
 
   /**
    * Google sign-in.
@@ -127,7 +127,11 @@ const Register = () => {
           keyboardShouldPersistTaps="handled"
         >
           <Pressable
-            onPress={() => (router.canGoBack() ? router.back() : router.replace("/(auth)/login"))}
+            onPress={() =>
+              router.canGoBack()
+                ? router.back()
+                : router.replace("/(auth)/login")
+            }
             hitSlop={8}
             style={styles.back}
           >
@@ -138,7 +142,11 @@ const Register = () => {
 
           <View style={styles.form}>
             <View style={styles.field}>
-              <Ionicons name="person-outline" size={18} color={colors.textFaint} />
+              <Ionicons
+                name="person-outline"
+                size={18}
+                color={colors.textFaint}
+              />
               <TextInput
                 value={form.name}
                 onChangeText={set("name")}
@@ -149,7 +157,11 @@ const Register = () => {
             </View>
 
             <View style={[styles.field, { marginTop: spacing.lg }]}>
-              <Ionicons name="mail-outline" size={18} color={colors.textFaint} />
+              <Ionicons
+                name="mail-outline"
+                size={18}
+                color={colors.textFaint}
+              />
               <TextInput
                 value={form.email}
                 onChangeText={set("email")}
@@ -191,7 +203,11 @@ const Register = () => {
             >
               {busy ? (
                 <View style={styles.submitBusy}>
-                  <SpinningIcon name="musical-notes" size={16} color={colors.bg} />
+                  <SpinningIcon
+                    name="musical-notes"
+                    size={16}
+                    color={colors.bg}
+                  />
                   <Text style={styles.submitLabel}>Signing up...</Text>
                 </View>
               ) : (
@@ -201,31 +217,40 @@ const Register = () => {
 
             <Text style={styles.continueLabel}>or continue with</Text>
 
-            <Pressable
-              onPress={handleGoogle}
-              disabled={googleBusy}
-              style={({ pressed }) => [
-                styles.socialButton,
-                pressed && styles.socialPressed,
-                googleBusy && { opacity: 0.6 },
-              ]}
-            >
-              {googleBusy ? (
-                <>
-                  <SpinningIcon
-                    name="musical-notes"
-                    size={16}
-                    color={colors.text}
-                  />
-                  <Text style={styles.socialLabel}>Signing up...</Text>
-                </>
-              ) : (
-                <>
-                  <Ionicons name="logo-google" size={16} color="#EA4335" />
-                  <Text style={styles.socialLabel}>Google</Text>
-                </>
-              )}
-            </Pressable>
+            {/*
+              Apple first, and not by accident: Apple ask that their sign-in
+              be no less prominent than the others it sits beside. On Android
+              the button renders nothing and the gap closes with it.
+            */}
+            <View style={styles.socialStack}>
+              <AppleSignInButton onError={setError} />
+
+              <Pressable
+                onPress={handleGoogle}
+                disabled={googleBusy}
+                style={({ pressed }) => [
+                  styles.socialButton,
+                  pressed && styles.socialPressed,
+                  googleBusy && { opacity: 0.6 },
+                ]}
+              >
+                {googleBusy ? (
+                  <>
+                    <SpinningIcon
+                      name="musical-notes"
+                      size={16}
+                      color={colors.text}
+                    />
+                    <Text style={styles.socialLabel}>Signing up...</Text>
+                  </>
+                ) : (
+                  <>
+                    <Ionicons name="logo-google" size={16} color="#EA4335" />
+                    <Text style={styles.socialLabel}>Google</Text>
+                  </>
+                )}
+              </Pressable>
+            </View>
 
             <View style={styles.footer}>
               <Text style={type.muted}>Already have an account? </Text>
@@ -315,6 +340,9 @@ const styles = StyleSheet.create({
     color: colors.textFaint,
     marginTop: spacing.xl,
     marginBottom: spacing.lg,
+  },
+  socialStack: {
+    gap: spacing.md,
   },
   socialButton: {
     height: 54,

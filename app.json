@@ -11,6 +11,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.tanthamusic.app",
+      "usesAppleSignIn": true,
       "infoPlist": {
         "UIBackgroundModes": [
           "audio",
@@ -55,6 +56,7 @@
       ],
       "expo-image",
       "expo-secure-store",
+      "expo-apple-authentication",
       [
         "expo-image-picker",
         {

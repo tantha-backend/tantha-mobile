@@ -139,7 +139,10 @@ const EditProfile = () => {
       setShowPassword(false);
       setToast({ text: "Password changed", tone: "success" });
     } catch (err) {
-      setToast({ text: errorMessage(err, "Could not change password"), tone: "error" });
+      setToast({
+        text: errorMessage(err, "Could not change password"),
+        tone: "error",
+      });
     } finally {
       setPwBusy(false);
     }
@@ -220,7 +223,11 @@ const EditProfile = () => {
 
           <Pressable onPress={pickPhoto} style={styles.avatarWrap}>
             {shownPhoto ? (
-              <Image source={{ uri: shownPhoto }} style={styles.avatar} contentFit="cover" />
+              <Image
+                source={{ uri: shownPhoto }}
+                style={styles.avatar}
+                contentFit="cover"
+              />
             ) : (
               <View style={[styles.avatar, styles.avatarFallback]}>
                 <Text style={styles.avatarInitial}>
@@ -270,7 +277,11 @@ const EditProfile = () => {
           >
             {saving ? (
               <View style={styles.submitBusy}>
-                <SpinningIcon name="musical-notes" size={16} color={colors.bg} />
+                <SpinningIcon
+                  name="musical-notes"
+                  size={16}
+                  color={colors.bg}
+                />
                 <Text style={styles.submitLabel}>Saving...</Text>
               </View>
             ) : (
@@ -335,7 +346,9 @@ const EditProfile = () => {
             style={styles.passwordToggle}
           >
             <Ionicons name="trash-outline" size={18} color={colors.danger} />
-            <Text style={[styles.passwordToggleLabel, { color: colors.danger }]}>
+            <Text
+              style={[styles.passwordToggleLabel, { color: colors.danger }]}
+            >
               Delete account
             </Text>
             <Ionicons
