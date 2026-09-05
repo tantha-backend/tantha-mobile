@@ -80,6 +80,16 @@ const EditProfile = () => {
     if (!result.canceled) setPhoto(result.assets[0]);
   };
 
+  /**
+   * Back to the profile, once the toast has had its moment. The new name and
+   * photo are only visible there, so staying on a form with nothing left to
+   * change reads as though the save did not take.
+   */
+  const leave = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace("/(tabs)/profile");
+  };
+
   const save = async () => {
     if (!name.trim()) {
       setToast({ text: "Please enter your name", tone: "error" });
@@ -93,7 +103,7 @@ const EditProfile = () => {
       await refresh();
 
       setPhoto(null);
-      setToast({ text: "Profile updated", tone: "success" });
+      setToast({ text: "Profile updated", tone: "success", then: leave });
     } catch (err) {
       setToast({ text: errorMessage(err, "Could not save"), tone: "error" });
     } finally {
@@ -380,7 +390,14 @@ const EditProfile = () => {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <Toast message={toast?.text} tone={toast?.tone} onHide={() => setToast(null)} />
+      <Toast
+        message={toast?.text}
+        tone={toast?.tone}
+        onHide={() => {
+          toast?.then?.();
+          setToast(null);
+        }}
+      />
     </Screen>
   );
 };
