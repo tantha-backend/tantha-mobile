@@ -49,8 +49,16 @@ const SongSheet = ({
   if (!song) return null;
 
   const liked = isLiked(song._id);
+  /**
+   * Only a verified artist has a page, so only a verified artist gets the
+   * row. An unverified credit is a name on a track, not a place to go.
+   */
   const artistId =
-    typeof song.artistId === "string" ? song.artistId : song.artistId?._id;
+    typeof song.artistId === "string"
+      ? null
+      : song.artistId?.isVerified
+        ? song.artistId?._id
+        : null;
 
   const close = () => {
     setPlaylists(undefined);
@@ -222,7 +230,9 @@ const PlaylistPicker = ({ playlists, addingTo, onPick, onNew }) => {
     return (
       <View style={styles.empty}>
         <Ionicons name="list-outline" size={30} color={colors.textFaint} />
-        <Text style={styles.emptyText}>You haven&apos;t made a playlist yet.</Text>
+        <Text style={styles.emptyText}>
+          You haven&apos;t made a playlist yet.
+        </Text>
 
         <Pressable
           onPress={onNew}
@@ -269,15 +279,18 @@ const PlaylistPicker = ({ playlists, addingTo, onPick, onNew }) => {
             pressed && { backgroundColor: colors.surfaceRaised },
           ]}
         >
-          <Artwork uri={item.coverImage} size={40} rounded={radius.sm} label={item.title} />
+          <Artwork
+            uri={item.coverImage}
+            size={40}
+            rounded={radius.sm}
+            label={item.title}
+          />
 
           <View style={{ flex: 1, marginLeft: spacing.md }}>
             <Text numberOfLines={1} style={styles.actionLabel}>
               {item.title}
             </Text>
-            <Text style={styles.credit}>
-              {item.songs?.length || 0} songs
-            </Text>
+            <Text style={styles.credit}>{item.songs?.length || 0} songs</Text>
           </View>
 
           {addingTo === item._id ? (

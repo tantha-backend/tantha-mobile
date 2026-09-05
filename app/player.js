@@ -24,7 +24,7 @@ import { Artwork, QueueIcon, Screen, Toast } from "../components/ui";
 import { colors, radius, spacing } from "../lib/theme";
 import {
   formatDuration,
-  songArtists,
+  songOpenableArtists,
   songArtwork,
   songCredit,
 } from "../lib/song";
@@ -163,7 +163,8 @@ const ProgressBar = ({ position, duration, onSeek }) => {
   ).current;
 
   const shown = dragAt ?? position;
-  const progress = duration > 0 ? Math.min(Math.max(shown / duration, 0), 1) : 0;
+  const progress =
+    duration > 0 ? Math.min(Math.max(shown / duration, 0), 1) : 0;
 
   return (
     <View
@@ -342,14 +343,19 @@ const Player = () => {
    * The artist line. One credit opens that artist; a collaboration has to ask
    * which one, since the line names several people and the tap cannot know
    * who was meant.
+   *
+   * Only verified artists are offered. The line itself still reads the whole
+   * credit — leaving a collaborator off their own track would be a lie — but
+   * an unverified name is a credit rather than a place, and there is nothing
+   * to open.
    */
+  const openable = songOpenableArtists(current);
+
   const openArtist = () => {
-    const artists = songArtists(current);
+    if (!openable.length) return;
+    if (openable.length === 1) return router.push(`/artist/${openable[0].id}`);
 
-    if (!artists.length) return;
-    if (artists.length === 1) return router.push(`/artist/${artists[0].id}`);
-
-    setArtistChoices(artists);
+    setArtistChoices(openable);
   };
 
   const onToggleLike = async () => {
@@ -382,215 +388,263 @@ const Player = () => {
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-      <View style={[styles.container, { paddingTop: insets.top + spacing.md }]}>
-        <View style={styles.topBar}>
-          <Pressable
-            onPress={() => router.back()}
-            hitSlop={12}
-            style={({ pressed }) => pressed && styles.pressed}
-          >
-            <Ionicons name="chevron-back" size={26} color={colors.text} />
-          </Pressable>
+        <View
+          style={[styles.container, { paddingTop: insets.top + spacing.md }]}
+        >
+          <View style={styles.topBar}>
+            <Pressable
+              onPress={() => router.back()}
+              hitSlop={12}
+              style={({ pressed }) => pressed && styles.pressed}
+            >
+              <Ionicons name="chevron-back" size={26} color={colors.text} />
+            </Pressable>
 
-          <Text style={styles.topLabel}>NOW PLAYING</Text>
+            <Text style={styles.topLabel}>NOW PLAYING</Text>
 
-          <Pressable
-            onPress={openPlaylists}
-            hitSlop={12}
-            style={({ pressed }) => pressed && styles.pressed}
-          >
-            <Ionicons name="ellipsis-horizontal" size={22} color={colors.text} />
-          </Pressable>
-        </View>
+            <Pressable
+              onPress={openPlaylists}
+              hitSlop={12}
+              style={({ pressed }) => pressed && styles.pressed}
+            >
+              <Ionicons
+                name="ellipsis-horizontal"
+                size={22}
+                color={colors.text}
+              />
+            </Pressable>
+          </View>
 
-        <View style={styles.artWrap}>
-          <AmbientGlow uri={songArtwork(current)} />
+          <View style={styles.artWrap}>
+            <AmbientGlow uri={songArtwork(current)} />
 
-          <Artwork
-            uri={songArtwork(current)}
-            size={ART_SIZE}
-            rounded={radius.lg}
-            label={current.title}
-          />
-        </View>
+            <Artwork
+              uri={songArtwork(current)}
+              size={ART_SIZE}
+              rounded={radius.lg}
+              label={current.title}
+            />
+          </View>
 
-        <View style={styles.metaRow}>
-          <View style={styles.meta}>
-            <Text numberOfLines={1} style={styles.title}>
-              {current.title || "Untitled"}
-            </Text>
-            {/* Left looking exactly like the caption it replaced. Pressing the
+          <View style={styles.metaRow}>
+            <View style={styles.meta}>
+              <Text numberOfLines={1} style={styles.title}>
+                {current.title || "Untitled"}
+              </Text>
+              {/* Left looking exactly like the caption it replaced. Pressing the
                 credit to reach the artist is the convention every music app
                 shares, so it is found without being marked, and a screen this
                 sparse does not want a decorated line running through it. The
                 press state is the only feedback it needs. */}
-            <Pressable
-              onPress={openArtist}
-              hitSlop={8}
-              style={({ pressed }) => pressed && styles.pressed}
-              accessibilityRole="link"
-              accessibilityLabel={`Go to ${songCredit(current)}`}
-            >
-              <Text numberOfLines={1} style={styles.artist}>
-                {songCredit(current)}
-              </Text>
-            </Pressable>
-          </View>
+              <Pressable
+                onPress={openArtist}
+                disabled={!openable.length}
+                hitSlop={8}
+                style={({ pressed }) => pressed && styles.pressed}
+                accessibilityRole={openable.length ? "link" : "text"}
+                accessibilityLabel={
+                  openable.length
+                    ? `Go to ${songCredit(current)}`
+                    : songCredit(current)
+                }
+              >
+                <Text numberOfLines={1} style={styles.artist}>
+                  {songCredit(current)}
+                </Text>
+              </Pressable>
+            </View>
 
-          {/* Add to a playlist. It was only reachable through the ⋯ in the
+            {/* Add to a playlist. It was only reachable through the ⋯ in the
               corner, which reads as an overflow menu rather than an action —
               and the mini player already offers it directly.
               Filled once the track is in a playlist, so the button answers
               "is this saved?" as well as offering to save it. */}
-          <Pressable
-            onPress={openPlaylists}
-            hitSlop={12}
-            style={({ pressed }) => pressed && styles.pressed}
-            accessibilityLabel={
-              inPlaylist ? "In a playlist. Add to another" : "Add to playlist"
-            }
-          >
-            {/*
+            <Pressable
+              onPress={openPlaylists}
+              hitSlop={12}
+              style={({ pressed }) => pressed && styles.pressed}
+              accessibilityLabel={
+                inPlaylist ? "In a playlist. Add to another" : "Add to playlist"
+              }
+            >
+              {/*
               A white tick on an accent disc rather than Ionicons'
               checkmark-circle, which knocks the tick out of the circle and so
               paints it with whatever sits behind — here the cover's own glow,
               a different colour every track.
             */}
-            {inPlaylist ? (
-              <View style={styles.savedBadge}>
-                <Ionicons name="checkmark" size={17} color="#ffffff" />
-              </View>
-            ) : (
-              <Ionicons name="add-circle-outline" size={27} color={colors.text} />
-            )}
-          </Pressable>
-
-          <Pressable
-            onPress={onToggleLike}
-            hitSlop={12}
-            disabled={likeBusy}
-            style={({ pressed }) => pressed && styles.pressed}
-            accessibilityLabel={liked ? "Remove from liked songs" : "Add to liked songs"}
-          >
-            <Ionicons
-              name={liked ? "heart" : "heart-outline"}
-              size={26}
-              color={liked ? colors.accent : colors.text}
-            />
-          </Pressable>
-        </View>
-
-        {error ? <Text style={styles.error}>{String(error)}</Text> : null}
-
-        <ProgressBar position={position} duration={duration} onSeek={seekTo} />
-
-        <View style={styles.times}>
-          <Text style={styles.time}>{formatDuration(position)}</Text>
-          <Text style={styles.time}>{formatDuration(duration)}</Text>
-        </View>
-
-        <View style={styles.controls}>
-          <Pressable
-            onPress={() => setShuffle(!shuffle)}
-            hitSlop={12}
-            style={({ pressed }) => pressed && styles.pressed}
-          >
-            <Ionicons
-              name="shuffle"
-              size={24}
-              color={shuffle ? colors.accent : colors.text}
-            />
-          </Pressable>
-
-          <Pressable
-            onPress={previous}
-            hitSlop={12}
-            style={({ pressed }) => pressed && styles.pressed}
-          >
-            <Ionicons name="play-skip-back" size={32} color={colors.text} />
-          </Pressable>
-
-          <Pressable
-            onPress={toggle}
-            hitSlop={8}
-            style={({ pressed }) => [styles.playButton, pressed && styles.pressed]}
-          >
-            {busy ? (
-              <ActivityIndicator color={colors.text} />
-            ) : (
-              <Ionicons
-                name={isPlaying ? "pause" : "play"}
-                size={30}
-                color={colors.text}
-                // Nudges the triangle so it looks centred in the circle.
-                style={!isPlaying && { marginLeft: 3 }}
-              />
-            )}
-          </Pressable>
-
-          <Pressable
-            onPress={next}
-            hitSlop={12}
-            style={({ pressed }) => pressed && styles.pressed}
-          >
-            <Ionicons name="play-skip-forward" size={32} color={colors.text} />
-          </Pressable>
-
-          <Pressable
-            onPress={() => setRepeat(!repeat)}
-            hitSlop={12}
-            style={({ pressed }) => pressed && styles.pressed}
-          >
-            <Ionicons
-              name="repeat"
-              size={24}
-              color={repeat ? colors.accent : colors.text}
-            />
-          </Pressable>
-        </View>
-
-        {/* Lyrics on the left, share and queue on the right. Icons alone —
-            the labels and divider took a row's worth of height that the
-            artwork and its gaps now use. */}
-        <View style={styles.tabs}>
-          <Pressable
-            onPress={() => setPanel("lyrics")}
-            hitSlop={12}
-            style={({ pressed }) => [styles.tabIcon, pressed && styles.pressed]}
-            accessibilityLabel="Lyrics"
-          >
-            <Ionicons name="chatbox-ellipses-outline" size={26} color={colors.text} />
-          </Pressable>
-
-          <View style={styles.tabsRight}>
-            <Pressable
-              onPress={share}
-              hitSlop={12}
-              style={({ pressed }) => [styles.tabIcon, pressed && styles.pressed]}
-              accessibilityLabel="Share"
-            >
-              <Ionicons name="share-outline" size={26} color={colors.text} />
+              {inPlaylist ? (
+                <View style={styles.savedBadge}>
+                  <Ionicons name="checkmark" size={17} color="#ffffff" />
+                </View>
+              ) : (
+                <Ionicons
+                  name="add-circle-outline"
+                  size={27}
+                  color={colors.text}
+                />
+              )}
             </Pressable>
 
             <Pressable
-              onPress={() => setPanel("queue")}
+              onPress={onToggleLike}
               hitSlop={12}
-              style={({ pressed }) => [styles.tabIcon, pressed && styles.pressed]}
-              accessibilityLabel="Queue"
+              disabled={likeBusy}
+              style={({ pressed }) => pressed && styles.pressed}
+              accessibilityLabel={
+                liked ? "Remove from liked songs" : "Add to liked songs"
+              }
             >
-              <QueueIcon size={26} color={colors.text} />
+              <Ionicons
+                name={liked ? "heart" : "heart-outline"}
+                size={26}
+                color={liked ? colors.accent : colors.text}
+              />
             </Pressable>
           </View>
-        </View>
-      </View>
 
-        <AboutArtist
-          artistId={current.artistId?._id || current.artistId}
-          onOpen={() => {
-            const id = current.artistId?._id || current.artistId;
-            if (id) router.push(`/artist/${id}`);
-          }}
-        />
+          {error ? <Text style={styles.error}>{String(error)}</Text> : null}
+
+          <ProgressBar
+            position={position}
+            duration={duration}
+            onSeek={seekTo}
+          />
+
+          <View style={styles.times}>
+            <Text style={styles.time}>{formatDuration(position)}</Text>
+            <Text style={styles.time}>{formatDuration(duration)}</Text>
+          </View>
+
+          <View style={styles.controls}>
+            <Pressable
+              onPress={() => setShuffle(!shuffle)}
+              hitSlop={12}
+              style={({ pressed }) => pressed && styles.pressed}
+            >
+              <Ionicons
+                name="shuffle"
+                size={24}
+                color={shuffle ? colors.accent : colors.text}
+              />
+            </Pressable>
+
+            <Pressable
+              onPress={previous}
+              hitSlop={12}
+              style={({ pressed }) => pressed && styles.pressed}
+            >
+              <Ionicons name="play-skip-back" size={32} color={colors.text} />
+            </Pressable>
+
+            <Pressable
+              onPress={toggle}
+              hitSlop={8}
+              style={({ pressed }) => [
+                styles.playButton,
+                pressed && styles.pressed,
+              ]}
+            >
+              {busy ? (
+                <ActivityIndicator color={colors.text} />
+              ) : (
+                <Ionicons
+                  name={isPlaying ? "pause" : "play"}
+                  size={30}
+                  color={colors.text}
+                  // Nudges the triangle so it looks centred in the circle.
+                  style={!isPlaying && { marginLeft: 3 }}
+                />
+              )}
+            </Pressable>
+
+            <Pressable
+              onPress={next}
+              hitSlop={12}
+              style={({ pressed }) => pressed && styles.pressed}
+            >
+              <Ionicons
+                name="play-skip-forward"
+                size={32}
+                color={colors.text}
+              />
+            </Pressable>
+
+            <Pressable
+              onPress={() => setRepeat(!repeat)}
+              hitSlop={12}
+              style={({ pressed }) => pressed && styles.pressed}
+            >
+              <Ionicons
+                name="repeat"
+                size={24}
+                color={repeat ? colors.accent : colors.text}
+              />
+            </Pressable>
+          </View>
+
+          {/* Lyrics on the left, share and queue on the right. Icons alone —
+            the labels and divider took a row's worth of height that the
+            artwork and its gaps now use. */}
+          <View style={styles.tabs}>
+            <Pressable
+              onPress={() => setPanel("lyrics")}
+              hitSlop={12}
+              style={({ pressed }) => [
+                styles.tabIcon,
+                pressed && styles.pressed,
+              ]}
+              accessibilityLabel="Lyrics"
+            >
+              <Ionicons
+                name="chatbox-ellipses-outline"
+                size={26}
+                color={colors.text}
+              />
+            </Pressable>
+
+            <View style={styles.tabsRight}>
+              <Pressable
+                onPress={share}
+                hitSlop={12}
+                style={({ pressed }) => [
+                  styles.tabIcon,
+                  pressed && styles.pressed,
+                ]}
+                accessibilityLabel="Share"
+              >
+                <Ionicons name="share-outline" size={26} color={colors.text} />
+              </Pressable>
+
+              <Pressable
+                onPress={() => setPanel("queue")}
+                hitSlop={12}
+                style={({ pressed }) => [
+                  styles.tabIcon,
+                  pressed && styles.pressed,
+                ]}
+                accessibilityLabel="Queue"
+              >
+                <QueueIcon size={26} color={colors.text} />
+              </Pressable>
+            </View>
+          </View>
+        </View>
+
+        {/*
+          Only for an artist with a page behind them. Unverified accounts
+          have no profile to fetch, so this would load nothing and offer a
+          tap that goes nowhere.
+        */}
+        {current.artistId?.isVerified ? (
+          <AboutArtist
+            artistId={current.artistId?._id || current.artistId}
+            onOpen={() => {
+              const id = current.artistId?._id || current.artistId;
+              if (id) router.push(`/artist/${id}`);
+            }}
+          />
+        ) : null}
 
         {/* Below the fold and below the artist, so nothing about playing a
             track has to be scrolled past an ad to reach. */}
@@ -614,7 +668,11 @@ const Player = () => {
             </ScrollView>
           ) : (
             <View style={styles.panelEmpty}>
-              <Ionicons name="musical-notes-outline" size={30} color={colors.textFaint} />
+              <Ionicons
+                name="musical-notes-outline"
+                size={30}
+                color={colors.textFaint}
+              />
               <Text style={styles.panelEmptyText}>
                 No lyrics saved for this track yet.
               </Text>
@@ -631,7 +689,11 @@ const Player = () => {
             </View>
           ) : playlists.length === 0 ? (
             <View style={styles.panelEmpty}>
-              <Ionicons name="list-outline" size={30} color={colors.textFaint} />
+              <Ionicons
+                name="list-outline"
+                size={30}
+                color={colors.textFaint}
+              />
               <Text style={styles.panelEmptyText}>
                 You haven&apos;t made a playlist yet.
               </Text>
@@ -666,7 +728,11 @@ const Player = () => {
                     pressed && { backgroundColor: colors.surfaceRaised },
                   ]}
                 >
-                  <Ionicons name="add-circle-outline" size={22} color={colors.accent} />
+                  <Ionicons
+                    name="add-circle-outline"
+                    size={22}
+                    color={colors.accent}
+                  />
                   <Text style={[styles.queueTitle, { color: colors.accent }]}>
                     New playlist
                   </Text>
