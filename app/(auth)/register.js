@@ -223,7 +223,7 @@ const Register = () => {
               the button renders nothing and the gap closes with it.
             */}
             <View style={styles.socialStack}>
-              <AppleSignInButton onError={setError} />
+              <AppleSignInButton signUp onError={setError} />
 
               <Pressable
                 onPress={handleGoogle}

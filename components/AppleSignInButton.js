@@ -1,32 +1,38 @@
 import { useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, Text } from "react-native";
+import Ionicons from "@expo/vector-icons/Ionicons";
+
 import { SpinningIcon } from "./ui";
-import { colors, radius } from "../lib/theme";
+import { colors, radius, spacing } from "../lib/theme";
 import { errorMessage } from "../lib/api";
-import { appleModule, isAppleSignInAvailable } from "../lib/appleAuth";
+import { isAppleSignInAvailable } from "../lib/appleAuth";
 import { useAuth } from "../lib/auth";
 
 /**
  * The Sign in with Apple button, on the two screens that offer a way in.
  *
- * ─── Why it is Apple's own button and not one of ours ────────────────────
+ * ─── Why it is drawn here rather than Apple's own component ──────────────
  *
- * Apple's guidelines set out how this button may look, and a review is not
- * the moment to find out how strictly that is read. Theirs also translates
- * its own label, which a hand-built one would not.
+ * `AppleAuthenticationButton` renders itself natively: its own typeface,
+ * weight and fill, none of which can be changed. Beside the Google button it
+ * read as a control borrowed from another app, which is exactly what it was.
+ * Apple permit a custom button provided it carries their mark and one of
+ * their three approved titles — "Sign in with", "Sign up with" or "Continue
+ * with Apple" — so the wording below is theirs and only the dressing is ours.
  *
- * The white style is deliberate against a near-black app: Apple ask for this
- * option to be no less prominent than the others, and a black button on a
- * black screen is the opposite of that.
+ * The cost of drawing it is the label no longer translates itself. Every
+ * other word on these screens is English, so nothing is lost today; it is
+ * worth remembering on the day the app is not.
+ *
+ * `signUp` picks which of the two titles to use. A sign-up page offering to
+ * sign you in reads as the wrong page.
  *
  * ─── Why it renders nothing off iOS ──────────────────────────────────────
  *
  * There is nothing behind it on Android, and offering a button that cannot
  * work is worse than offering none.
  */
-const HEIGHT = 54;
-
-const AppleSignInButton = ({ onError }) => {
+const AppleSignInButton = ({ onError, signUp = false }) => {
   const { signInWithApple } = useAuth();
   const [busy, setBusy] = useState(false);
 
@@ -52,41 +58,68 @@ const AppleSignInButton = ({ onError }) => {
     }
   };
 
-  if (busy) {
-    return (
-      <View style={styles.busy}>
-        <SpinningIcon name="musical-notes" size={16} color={colors.bg} />
-      </View>
-    );
-  }
-
   return (
-    <appleModule.AppleAuthenticationButton
-      buttonType={appleModule.AppleAuthenticationButtonType.SIGN_IN}
-      buttonStyle={appleModule.AppleAuthenticationButtonStyle.WHITE}
-      cornerRadius={HEIGHT / 2}
-      style={styles.button}
+    <Pressable
       onPress={handlePress}
-    />
+      disabled={busy}
+      style={({ pressed }) => [
+        styles.button,
+        pressed && styles.pressed,
+        busy && styles.busy,
+      ]}
+      accessibilityRole="button"
+      accessibilityLabel={signUp ? "Sign up with Apple" : "Sign in with Apple"}
+    >
+      {busy ? (
+        <>
+          <SpinningIcon name="musical-notes" size={16} color={colors.text} />
+          <Text style={styles.label}>
+            {signUp ? "Signing up..." : "Signing in..."}
+          </Text>
+        </>
+      ) : (
+        <>
+          {/* Nudged up a point: the mark sits optically low against text. */}
+          <Ionicons
+            name="logo-apple"
+            size={18}
+            color={colors.text}
+            style={styles.mark}
+          />
+          <Text style={styles.label}>
+            {signUp ? "Sign up with Apple" : "Sign in with Apple"}
+          </Text>
+        </>
+      )}
+    </Pressable>
   );
 };
 
+/** Deliberately the same shape as the Google button it sits above. */
 const styles = StyleSheet.create({
   button: {
-    width: "100%",
-    height: HEIGHT,
-  },
-  /**
-   * Apple's button cannot show a spinner, so it is swapped for one at the
-   * same size — otherwise the row collapses and everything below it jumps.
-   */
-  busy: {
-    width: "100%",
-    height: HEIGHT,
+    height: 54,
     borderRadius: radius.pill,
-    backgroundColor: colors.text,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: spacing.sm,
+  },
+  pressed: {
+    backgroundColor: colors.surfaceRaised,
+  },
+  busy: {
+    opacity: 0.6,
+  },
+  mark: {
+    marginTop: -2,
+  },
+  label: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: "600",
   },
 });
 
