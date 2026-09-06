@@ -352,7 +352,18 @@ const Player = () => {
   const openable = songOpenableArtists(current);
 
   const openArtist = () => {
-    if (!openable.length) return;
+    /**
+     * Saying so beats a tap that does nothing.
+     *
+     * Silence reads as a broken button: you press the name, the screen does
+     * not move, and the only conclusion available is that the app dropped
+     * the tap. One line explains it and nobody presses twice.
+     */
+    if (!openable.length) {
+      setToast({ text: "This artist isn't verified yet", tone: "error" });
+      return;
+    }
+
     if (openable.length === 1) return router.push(`/artist/${openable[0].id}`);
 
     setArtistChoices(openable);
@@ -438,7 +449,6 @@ const Player = () => {
                 press state is the only feedback it needs. */}
               <Pressable
                 onPress={openArtist}
-                disabled={!openable.length}
                 hitSlop={8}
                 style={({ pressed }) => pressed && styles.pressed}
                 accessibilityRole={openable.length ? "link" : "text"}
