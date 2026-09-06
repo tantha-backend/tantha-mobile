@@ -20,6 +20,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 
 import AboutArtist from "../components/AboutArtist";
 import AdBanner from "../components/AdBanner";
+import PlayerLogSheet from "../components/PlayerLogSheet";
 import ArtistPicker from "../components/ArtistPicker";
 import { Artwork, QueueIcon, Screen, Toast } from "../components/ui";
 import { colors, radius, spacing } from "../lib/theme";
@@ -318,6 +319,7 @@ const Player = () => {
   const [playlists, setPlaylists] = useState(null);
   const [addingTo, setAddingTo] = useState(null);
   const [toast, setToast] = useState(null); // { text, tone }
+  const [logOpen, setLogOpen] = useState(false);
 
   /**
    * Every song id that sits in one of this listener's playlists, so the ⊕ can
@@ -482,7 +484,17 @@ const Player = () => {
               <Ionicons name="chevron-back" size={26} color={colors.text} />
             </Pressable>
 
-            <Text style={styles.topLabel}>NOW PLAYING</Text>
+            {/*
+              Long press opens the player log. Deliberately out of the way:
+              it is a diagnostic, not a feature, and nobody should find it by
+              accident.
+            */}
+            <Pressable
+              onLongPress={() => setLogOpen(true)}
+              delayLongPress={800}
+            >
+              <Text style={styles.topLabel}>NOW PLAYING</Text>
+            </Pressable>
 
             <Pressable
               onPress={openPlaylists}
@@ -901,6 +913,8 @@ const Player = () => {
           />
         </Panel>
       )}
+
+      <PlayerLogSheet visible={logOpen} onClose={() => setLogOpen(false)} />
 
       <Toast
         message={toast?.text}
