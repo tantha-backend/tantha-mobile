@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
   Dimensions,
   FlatList,
   PanResponder,
@@ -88,44 +89,99 @@ const AmbientGlow = ({ uri }) => {
 };
 
 /**
+ * How close the reported position must come to a released seek before the
+ * bar starts following playback again, and how long to wait for it at all.
+ */
+const SEEK_SETTLE_SECONDS = 1.5;
+const SEEK_GIVE_UP_MS = 2500;
+
+/**
  * Scrub bar, draggable.
  *
  * Built from Views rather than a slider dependency, but a tap-to-seek
- * Pressable was not enough: dragging did nothing, and the two things that
- * make a scrubber feel right are both missing from that approach.
+ * Pressable was not enough: dragging did nothing, and the three things that
+ * make a scrubber feel right are all missing from that approach.
  *
  * The first is that the thumb has to follow your finger continuously. The
  * second, less obvious, is that while you are dragging it must ignore the
- * playing position entirely — the player reports where it is several times a
- * second, and letting that through means the thumb is fighting the finger,
- * snapping back between updates. So a drag takes over the displayed value
- * until it ends, and only then is a seek issued.
+ * playing position entirely — the player reports where it is twice a second,
+ * and letting that through means the thumb is fighting the finger, snapping
+ * back between updates.
+ *
+ * ─── The third: letting go must not throw the thumb backwards ────────────
+ *
+ * A seek is not instant. Releasing used to hand the display straight back to
+ * the reported position, which was still wherever the song had been playing
+ * — so the thumb jumped back across the bar and then jumped forward again a
+ * moment later when the seek landed. Two visible jumps for one gesture, and
+ * the reason scrubbing felt broken rather than merely imprecise.
+ *
+ * So a released seek is remembered, and playback only takes the bar back
+ * once it reports arriving near it. `SEEK_GIVE_UP_MS` is the way out if it
+ * never does: a bar frozen on a seek that failed is worse than one that
+ * jumps.
+ *
+ * ─── Why the position is animated rather than held in state ──────────────
+ *
+ * Every touch move used to call setState, so React re-rendered and React
+ * Native re-ran layout for a percentage width — sixty times a second, on the
+ * same thread everything else on this screen is using. That is what made
+ * dragging feel rough. An Animated.Value writes the style directly, without
+ * a render, and `held` is the only state left because it changes twice per
+ * gesture rather than every frame.
  *
  * Positions come from the gesture's screen coordinates measured against the
  * bar's own position on screen, rather than locationX, which is not reliable
  * across a continuous move.
  */
 const ProgressBar = ({ position, duration, onSeek }) => {
-  const [width, setWidth] = useState(0);
-  const [dragAt, setDragAt] = useState(null);
+  const [held, setHeld] = useState(false);
 
   const bar = useRef(null);
 
   // Read inside gesture handlers, which capture their scope once and would
   // otherwise keep seeing whatever these were when the responder was made.
   const geometry = useRef({ left: 0, width: 0, duration: 0 });
-  geometry.current.width = width;
   geometry.current.duration = duration;
 
+  const ratio = useRef(new Animated.Value(0)).current;
+
   const dragRef = useRef(null);
+  const pending = useRef(null);
+
+  const showSeconds = (seconds) => {
+    const d = geometry.current.duration;
+
+    ratio.setValue(d > 0 ? Math.min(Math.max(seconds / d, 0), 1) : 0);
+  };
+
+  /**
+   * Playback moves the bar only when a finger is not, and only once a
+   * released seek has actually landed.
+   */
+  useEffect(() => {
+    if (dragRef.current !== null) return;
+
+    if (pending.current !== null) {
+      const { at, since } = pending.current;
+      const arrived = Math.abs(position - at) <= SEEK_SETTLE_SECONDS;
+
+      if (!arrived && Date.now() - since < SEEK_GIVE_UP_MS) return;
+
+      pending.current = null;
+    }
+
+    showSeconds(position);
+  }, [position, duration]);
 
   const secondsAt = (pageX) => {
     const { left, width: w, duration: d } = geometry.current;
 
     if (!w || !d) return 0;
 
-    const ratio = Math.max(0, Math.min((pageX - left) / w, 1));
-    return ratio * d;
+    const value = Math.max(0, Math.min((pageX - left) / w, 1));
+
+    return value * d;
   };
 
   const responder = useRef(
@@ -139,39 +195,54 @@ const ProgressBar = ({ position, duration, onSeek }) => {
 
       onPanResponderGrant: (event) => {
         const at = secondsAt(event.nativeEvent.pageX);
+
         dragRef.current = at;
-        setDragAt(at);
+        pending.current = null;
+        showSeconds(at);
+        setHeld(true);
       },
 
       onPanResponderMove: (_event, gesture) => {
         const at = secondsAt(gesture.moveX);
+
         dragRef.current = at;
-        setDragAt(at);
+        showSeconds(at);
       },
 
       onPanResponderRelease: () => {
-        if (dragRef.current !== null) onSeek(dragRef.current);
+        const at = dragRef.current;
+
         dragRef.current = null;
-        setDragAt(null);
+        setHeld(false);
+
+        if (at === null) return;
+
+        // Held on screen until playback reports arriving, so letting go does
+        // not throw the thumb back to where the song still is.
+        pending.current = { at, since: Date.now() };
+        showSeconds(at);
+        onSeek(at);
       },
 
       onPanResponderTerminate: () => {
         dragRef.current = null;
-        setDragAt(null);
+        setHeld(false);
       },
     }),
   ).current;
 
-  const shown = dragAt ?? position;
-  const progress =
-    duration > 0 ? Math.min(Math.max(shown / duration, 0), 1) : 0;
+  const percent = ratio.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0%", "100%"],
+  });
 
   return (
     <View
       ref={bar}
       // Measured in window coordinates so a drag can be placed against it.
       onLayout={(e) => {
-        setWidth(e.nativeEvent.layout.width);
+        geometry.current.width = e.nativeEvent.layout.width;
+
         bar.current?.measureInWindow?.((x) => {
           geometry.current.left = x;
         });
@@ -180,13 +251,13 @@ const ProgressBar = ({ position, duration, onSeek }) => {
       {...responder.panHandlers}
     >
       <View style={styles.progressTrack}>
-        <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
-        <View
+        <Animated.View style={[styles.progressFill, { width: percent }]} />
+        <Animated.View
           style={[
             styles.progressKnob,
-            { left: `${progress * 100}%` },
+            { left: percent },
             // Grows under the finger, so it is clear what you have hold of.
-            dragAt !== null && styles.progressKnobHeld,
+            held && styles.progressKnobHeld,
           ]}
         />
       </View>
