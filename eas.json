@@ -39,7 +39,8 @@
   "submit": {
     "production": {
       "ios": {
-        "bundleIdentifier": "com.tanthamusic.app"
+        "bundleIdentifier": "com.tanthamusic.app",
+        "ascAppId": "6808538992"
       }
     }
   }
